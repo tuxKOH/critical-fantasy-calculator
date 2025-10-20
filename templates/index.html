@@ -1,1 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Critical Fantasy Damage Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .calculator {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .equipment-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .equipment-item:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+        
+        .equipment-item.selected {
+            border-color: #667eea;
+            background: #e3f2fd;
+        }
+        
+        .equipment-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .equipment-desc {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.4;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .potion-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .potion-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .potion-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .potion-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .potion-info {
+            flex: 1;
+        }
+        
+        .potion-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .potion-desc {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .result h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .result-label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .result-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .result-highlight {
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #856404;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #ffeaea;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid #f5b7b1;
+        }
+        
+        .flame-set-indicator {
+            background: #ff6b6b;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Critical Fantasy Damage Calculator</h1>
+            <p>Calculate your ideal damage with equipment combinations</p>
+        </div>
+        
+        <div class="calculator">
+            <div class="form-group">
+                <label for="damageType">Damage Type:</label>
+                <select id="damageType">
+                    <option value="attack">Attack (Physical)</option>
+                    <option value="magic">Magic</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Select Equipment (Max 3):</label>
+                <div class="note">
+                    If you didn't see your passive, it means it doesn't have any special effect so it doesn't matter. You can just input atk/magic and crit later.
+                </div>
+                <div class="equipment-grid" id="equipmentGrid">
+                    <div class="equipment-item" data-value="cursed_spellbook">
+                        <div class="equipment-name">Cursed Spellbook</div>
+                        <div class="equipment-desc">1.3x damage (ontop)</div>
+                    </div>
+                    <div class="equipment-item" data-value="dual_sword">
+                        <div class="equipment-name">Dual Sword</div>
+                        <div class="equipment-desc">15% chance for 2x damage (ontop)</div>
+                    </div>
+                    <div class="equipment-item" data-value="blood_butcher">
+                        <div class="equipment-name">Blood Butcher</div>
+                        <div class="equipment-desc">Debuff: 100% bloodbutchrd chance, 5% min damage per second for 9s per hit</div>
+                    </div>
+                    <div class="equipment-item" data-value="daybreak">
+                        <div class="equipment-name">Daybreak <span class="flame-set-indicator">Flame Set</span></div>
+                        <div class="equipment-desc">+52% burn chance</div>
+                    </div>
+                    <div class="equipment-item" data-value="evernight">
+                        <div class="equipment-name">Evernight <span class="flame-set-indicator">Flame Set</span></div>
+                        <div class="equipment-desc">+40% burn chance</div>
+                    </div>
+                    <div class="equipment-item" data-value="queenbee_crown">
+                        <div class="equipment-name">Queenbee Crown</div>
+                        <div class="equipment-desc">+26% bleeding chance (5 hits of 25% physical damage)</div>
+                    </div>
+                    <div class="equipment-item" data-value="volatile_gem">
+                        <div class="equipment-name">Volatile Gem <span class="flame-set-indicator">Flame Set</span></div>
+                        <div class="equipment-desc">+11% burn, +11% poison +20% magic damage to DoT</div>
+                    </div>
+                </div>
+                <div id="equipmentError" class="error" style="display: none;">You can only select up to 3 equipment items!</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="form-group">
+                    <label for="minDamage">Min Attack Damage:</label>
+                    <input type="number" id="minDamage" placeholder="Enter min damage" min="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="maxDamage">Max Attack Damage:</label>
+                    <input type="number" id="maxDamage" placeholder="Enter max damage" min="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="magicDamage">Magic Damage:</label>
+                    <input type="number" id="magicDamage" placeholder="Enter magic damage" min="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="critRate">Crit Rate (%):</label>
+                    <input type="number" id="critRate" placeholder="Enter crit rate" min="0" max="100" step="1" value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="critDamage">Crit Damage (%):</label>
+                    <input type="number" id="critDamage" placeholder="Enter crit damage" min="100" step="1" value="150">
+                </div>
+            </div>
 
+            <!-- Potion Section -->
+            <div class="potion-section">
+                <h3>Potion Effects</h3>
+                <div class="potion-grid">
+                    <div class="potion-item">
+                        <input type="checkbox" id="magicPotion" onchange="calculateDamage()">
+                        <div class="potion-info">
+                            <div class="potion-name">Magic Potion</div>
+                            <div class="potion-desc">1.75x Magic Damage</div>
+                        </div>
+                    </div>
+                    <div class="potion-item">
+                        <input type="checkbox" id="attackPotion" onchange="calculateDamage()">
+                        <div class="potion-info">
+                            <div class="potion-name">Attack Potion</div>
+                            <div class="potion-desc">1.75x Attack Damage</div>
+                        </div>
+                    </div>
+                    <div class="potion-item">
+                        <input type="checkbox" id="goldenApple" onchange="calculateDamage()">
+                        <div class="potion-info">
+                            <div class="potion-name">Golden Apple</div>
+                            <div class="potion-desc">1.5x Attack Damage (does not stack with Attack Potion)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="calculate-btn" onclick="calculateDamage()">Calculate Damage</button>
+            
+            <div class="result" id="resultSection" style="display: none;">
+                <h3>Calculation Results</h3>
+                <div class="result-item">
+                    <span class="result-label">Original Damage Range:</span>
+                    <span class="result-value" id="resultOriginalRange">0 - 0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Original Average Damage:</span>
+                    <span class="result-value" id="resultAvg">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Effective Damage Range:</span>
+                    <span class="result-value" id="resultEffectiveRange">0 - 0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Effective Average Damage:</span>
+                    <span class="result-value" id="resultEffectiveAvg">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Effective Magic Damage:</span>
+                    <span class="result-value" id="resultEffectiveMagic">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Crit Multiplied Damage:</span>
+                    <span class="result-value" id="resultCrit">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">DoT Damage:</span>
+                    <span class="result-value" id="resultDot">0</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Total Burn Chance:</span>
+                    <span class="result-value" id="resultBurnChance">0%</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Flame Set Items:</span>
+                    <span class="result-value" id="resultFlameSet">0</span>
+                </div>
+                <div class="result-item" style="border-bottom: none;">
+                    <span class="result-label result-highlight">Final Damage:</span>
+                    <span class="result-value result-highlight" id="resultFinal">0</span>
+                </div>
+                <div class="result-item" style="border-bottom: none;">
+                    <span class="result-label">Effective Multiplier:</span>
+                    <span class="result-value" id="resultMultiplier">0x</span>
+                </div>
+            </div>
+            
+            <div class="note">
+                <strong>Note:</strong> DoT damage is calculated separately and is not affected by crit or equipment damage multipliers. Flame Set bonus (+10% burn chance) is applied when having 2+ flame set items. Potion effects apply to base stats and affect DoT damage calculations.
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>made by <strong>@tux_koh</strong></p>
+            <p><a href="https://www.roblox.com/game-pass/1540670718/donation" target="_blank">donate me 10 bobux :D</a></p>
+        </div>
+    </div>
+
+    <script>
+        let selectedEquipment = [];
+        const maxEquipment = 3;
+        
+        // Equipment selection
+        document.querySelectorAll('.equipment-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const value = item.getAttribute('data-value');
+                
+                if (selectedEquipment.includes(value)) {
+                    // Deselect
+                    selectedEquipment = selectedEquipment.filter(eq => eq !== value);
+                    item.classList.remove('selected');
+                } else {
+                    // Select
+                    if (selectedEquipment.length < maxEquipment) {
+                        selectedEquipment.push(value);
+                        item.classList.add('selected');
+                        document.getElementById('equipmentError').style.display = 'none';
+                    } else {
+                        document.getElementById('equipmentError').style.display = 'block';
+                    }
+                }
+                calculateDamage();
+            });
+        });
+
+        // Auto-calculate when inputs change
+        document.getElementById('minDamage').addEventListener('input', calculateDamage);
+        document.getElementById('maxDamage').addEventListener('input', calculateDamage);
+        document.getElementById('magicDamage').addEventListener('input', calculateDamage);
+        document.getElementById('critRate').addEventListener('input', calculateDamage);
+        document.getElementById('critDamage').addEventListener('input', calculateDamage);
+        document.getElementById('damageType').addEventListener('change', calculateDamage);
+        
+        function calculateDamage() {
+            const minDamage = document.getElementById('minDamage').value;
+            const maxDamage = document.getElementById('maxDamage').value;
+            const magicDamage = document.getElementById('magicDamage').value;
+            
+            // Don't calculate if required fields are empty
+            if (!minDamage || !maxDamage || !magicDamage) {
+                return;
+            }
+
+            const data = {
+                damageType: document.getElementById('damageType').value,
+                minDamage: minDamage,
+                maxDamage: maxDamage,
+                magicDamage: magicDamage,
+                critRate: document.getElementById('critRate').value,
+                critDamage: document.getElementById('critDamage').value,
+                equipment: selectedEquipment,
+                magicPotion: document.getElementById('magicPotion').checked,
+                attackPotion: document.getElementById('attackPotion').checked,
+                goldenApple: document.getElementById('goldenApple').checked
+            };
+            
+            fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    document.getElementById('resultOriginalRange').textContent = 
+                        result.min_damage.toLocaleString() + ' - ' + result.max_damage.toLocaleString();
+                    document.getElementById('resultAvg').textContent = result.avg_damage.toLocaleString();
+                    document.getElementById('resultEffectiveRange').textContent = 
+                        result.effective_min_damage.toLocaleString() + ' - ' + result.effective_max_damage.toLocaleString();
+                    document.getElementById('resultEffectiveAvg').textContent = result.effective_avg_damage.toLocaleString();
+                    document.getElementById('resultEffectiveMagic').textContent = result.effective_magic_damage.toLocaleString();
+                    document.getElementById('resultCrit').textContent = result.crit_multiplied_damage.toLocaleString();
+                    document.getElementById('resultDot').textContent = result.dot_damage.toLocaleString();
+                    document.getElementById('resultFinal').textContent = result.final_damage.toLocaleString();
+                    document.getElementById('resultMultiplier').textContent = result.effective_multiplier + 'x';
+                    document.getElementById('resultBurnChance').textContent = result.burn_chance + '%';
+                    document.getElementById('resultFlameSet').textContent = result.flame_set_count;
+                    document.getElementById('resultSection').style.display = 'block';
+                } else {
+                    console.error('Error:', result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error calculating damage:', error);
+            });
+        }
+    </script>
+</body>
+</html>
