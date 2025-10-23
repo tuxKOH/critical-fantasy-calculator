@@ -33,8 +33,8 @@ class DamageCalculator:
             crit_rate = float(data.get('critRate', 0)) / 100
             crit_damage = float(data.get('critDamage', 150)) / 100
             
-            # Calculate average damage
-            avg_damage = (min_damage + max_damage) / 2
+            # Calculate average physical damage
+            avg_physical_damage = (min_damage + max_damage) / 2
             
             # Get potion effects
             has_magic_potion = data.get('magicPotion', False)
@@ -44,26 +44,32 @@ class DamageCalculator:
             # Apply potion effects to base stats
             effective_min_damage = min_damage
             effective_max_damage = max_damage
-            effective_avg_damage = avg_damage
+            effective_avg_physical_damage = avg_physical_damage
             effective_magic_damage = magic_damage
             
             if has_attack_potion:
                 effective_min_damage *= 1.75
                 effective_max_damage *= 1.75
-                effective_avg_damage *= 1.75
+                effective_avg_physical_damage *= 1.75
             if has_golden_apple:
                 effective_min_damage *= 1.5
                 effective_max_damage *= 1.5
-                effective_avg_damage *= 1.5
+                effective_avg_physical_damage *= 1.5
             if has_magic_potion:
                 effective_magic_damage *= 1.75
             
             # Get selected equipment
             equipment = data.get('equipment', [])
             
-            # Calculate base crit damage (using average damage)
+            # Calculate base damage based on damage type
+            if damage_type == 'magic':
+                base_damage = effective_magic_damage
+            else:  # attack
+                base_damage = effective_avg_physical_damage
+            
+            # Calculate base crit damage
             base_crit_multiplier = 1 + (crit_rate * (crit_damage - 1))
-            total_damage = effective_avg_damage * base_crit_multiplier
+            total_damage = base_damage * base_crit_multiplier
             
             # Apply equipment effects
             dot_damage = 0
@@ -108,9 +114,9 @@ class DamageCalculator:
                     burn_damage += effective_magic_damage * 0.20
                 dot_damage += burn_damage * min(burn_chance, 1)
             
-            # Queenbee Crown (bleeding) - uses potion-boosted average damage
+            # Queenbee Crown (bleeding) - uses potion-boosted average physical damage
             if 'queenbee_crown' in equipment:
-                bleeding_damage = effective_avg_damage * 0.25 * 5
+                bleeding_damage = effective_avg_physical_damage * 0.25 * 5
                 dot_damage += bleeding_damage * 0.26
             
             # Volatile Gem poison - uses potion-boosted magic damage
@@ -119,7 +125,7 @@ class DamageCalculator:
                 poison_damage += effective_magic_damage * 0.20
                 dot_damage += poison_damage * 0.11
             
-            # Blood Butcher - uses potion-boosted min damage
+            # Blood Butcher - uses potion-boosted min physical damage
             if 'blood_butcher' in equipment:
                 blood_damage = effective_min_damage * 0.05 * 9  # 9 seconds of 5% min damage per second
                 dot_damage += blood_damage
@@ -131,15 +137,17 @@ class DamageCalculator:
                 'success': True,
                 'min_damage': round(min_damage, 2),
                 'max_damage': round(max_damage, 2),
-                'avg_damage': round(avg_damage, 2),
+                'magic_damage': round(magic_damage, 2),
+                'avg_physical_damage': round(avg_physical_damage, 2),
                 'effective_min_damage': round(effective_min_damage, 2),
                 'effective_max_damage': round(effective_max_damage, 2),
-                'effective_avg_damage': round(effective_avg_damage, 2),
+                'effective_avg_physical_damage': round(effective_avg_physical_damage, 2),
                 'effective_magic_damage': round(effective_magic_damage, 2),
+                'base_damage': round(base_damage, 2),
                 'crit_multiplied_damage': round(total_damage, 2),
                 'dot_damage': round(dot_damage, 2),
                 'final_damage': round(final_damage, 2),
-                'effective_multiplier': round(final_damage / avg_damage, 2) if avg_damage > 0 else 0,
+                'effective_multiplier': round(final_damage / base_damage, 2) if base_damage > 0 else 0,
                 'burn_chance': round(burn_chance * 100, 1),
                 'flame_set_count': flame_set_count,
                 'potion_effects': {
