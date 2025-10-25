@@ -33,6 +33,54 @@ class DamageCalculator:
     BASE_CRIT_DAMAGE = 100  # Base 100% crit damage
     MAX_DEX_CRIT = 50 * DEX_CRIT  # Max 50 dexterity points = 40% crit rate
     
+    # Base stats for level 0 character
+    BASE_MIN_ATK = 8
+    BASE_MAX_ATK = 15
+    BASE_MAGIC = 10
+    
+    @staticmethod
+    def calculate_equipment_bonus(equipment_data):
+        """Calculate actual equipment bonuses from drop range"""
+        bonuses = {
+            'atk_min': 0,
+            'atk_max': 0,
+            'magic': 0,
+            'crit_chance': 0,
+            'crit_damage': 0,
+            'health': 0,
+            'shield': 0
+        }
+        
+        stats = equipment_data.get('stats', {})
+        
+        # Handle attack range (physical equipment)
+        if 'atk_min' in stats and 'atk_max' in stats:
+            # Get the middle value of the drop range
+            drop_min = stats['atk_min']
+            drop_max = stats['atk_max']
+            middle_value = (drop_min + drop_max) / 2
+            
+            # Apply the 0.85x to min and 1.25x to max for actual bonus
+            bonuses['atk_min'] = middle_value * 0.85
+            bonuses['atk_max'] = middle_value * 1.25
+        
+        # Handle magic damage (magic equipment)
+        if 'magic' in stats:
+            # For magic equipment, just use the value directly
+            bonuses['magic'] = stats['magic']
+        
+        # Handle other stats (direct addition)
+        if 'crit_chance' in stats:
+            bonuses['crit_chance'] = stats['crit_chance']
+        if 'crit_damage' in stats:
+            bonuses['crit_damage'] = stats['crit_damage']
+        if 'health' in stats:
+            bonuses['health'] = stats['health']
+        if 'shield' in stats:
+            bonuses['shield'] = stats['shield']
+            
+        return bonuses
+    
     @staticmethod
     def calculate_stats_from_points(strength, vitality, intelligence, dexterity, defense):
         """Calculate base stats from attribute points"""
@@ -40,10 +88,10 @@ class DamageCalculator:
         effective_dex_crit = min(dexterity, 50) * DamageCalculator.DEX_CRIT
         
         return {
-            'min_damage': strength * DamageCalculator.STR_DMG_MIN,
-            'max_damage': strength * DamageCalculator.STR_DMG_MAX,
+            'min_damage': strength * DamageCalculator.STR_DMG_MIN + DamageCalculator.BASE_MIN_ATK,
+            'max_damage': strength * DamageCalculator.STR_DMG_MAX + DamageCalculator.BASE_MAX_ATK,
             'health': vitality * DamageCalculator.VIT_HP,
-            'magic_damage': intelligence * DamageCalculator.INT_MAGIC,
+            'magic_damage': intelligence * DamageCalculator.INT_MAGIC + DamageCalculator.BASE_MAGIC,
             'crit_chance': DamageCalculator.BASE_CRIT_RATE + effective_dex_crit,
             'crit_damage': DamageCalculator.BASE_CRIT_DAMAGE,
             'shield': defense * DamageCalculator.DEF_SHIELD
@@ -82,11 +130,11 @@ class DamageCalculator:
                 base_crit_damage = base_stats['crit_damage']
             else:
                 # Use manual input
-                min_damage = float(data.get('minDamage', 0))
-                max_damage = float(data.get('maxDamage', 0))
-                magic_damage = float(data.get('magicDamage', 0))
-                base_crit_rate = DamageCalculator.BASE_CRIT_RATE
-                base_crit_damage = DamageCalculator.BASE_CRIT_DAMAGE
+                min_damage = float(data.get('minDamage', 0)) or DamageCalculator.BASE_MIN_ATK
+                max_damage = float(data.get('maxDamage', 0)) or DamageCalculator.BASE_MAX_ATK
+                magic_damage = float(data.get('magicDamage', 0)) or DamageCalculator.BASE_MAGIC
+                base_crit_rate = float(data.get('critRate', DamageCalculator.BASE_CRIT_RATE))
+                base_crit_damage = float(data.get('critDamage', DamageCalculator.BASE_CRIT_DAMAGE))
             
             # Track set bonuses (FIXED: include weapon sets)
             set_counts = {
@@ -103,13 +151,14 @@ class DamageCalculator:
             # Apply weapon stats if weapon is selected and count weapon set
             if selected_weapon:
                 weapon_data = WEAPON_DB.get(selected_weapon, {})
-                weapon_stats = weapon_data.get('stats', {})
-                min_damage += weapon_stats.get('atk_min', 0)
-                max_damage += weapon_stats.get('atk_max', 0)
-                magic_damage += weapon_stats.get('magic', 0)
+                weapon_bonus = DamageCalculator.calculate_equipment_bonus(weapon_data)
+                
+                min_damage += weapon_bonus['atk_min']
+                max_damage += weapon_bonus['atk_max']
+                magic_damage += weapon_bonus['magic']
                 # Apply weapon crit stats
-                base_crit_rate += weapon_stats.get('crit_chance', 0)
-                base_crit_damage += weapon_stats.get('crit_damage', 0)
+                base_crit_rate += weapon_bonus['crit_chance']
+                base_crit_damage += weapon_bonus['crit_damage']
                 
                 # Count weapon set piece (FIXED: add weapon to set count)
                 if weapon_data.get('set'):
@@ -133,14 +182,14 @@ class DamageCalculator:
             # Apply equipment stats and count set pieces
             for eq in equipment:
                 eq_data = EQUIPMENT_DB.get(eq, {})
-                stats = eq_data.get('stats', {})
+                eq_bonus = DamageCalculator.calculate_equipment_bonus(eq_data)
                 
                 # Apply stat bonuses to BASE stats (so they get multiplied by potions)
-                min_damage += stats.get('atk_min', 0)
-                max_damage += stats.get('atk_max', 0)
-                magic_damage += stats.get('magic', 0)
-                total_crit_rate += stats.get('crit_chance', 0)
-                total_crit_damage += stats.get('crit_damage', 0)
+                min_damage += eq_bonus['atk_min']
+                max_damage += eq_bonus['atk_max']
+                magic_damage += eq_bonus['magic']
+                total_crit_rate += eq_bonus['crit_chance']
+                total_crit_damage += eq_bonus['crit_damage']
                 
                 # Count set pieces
                 if eq_data.get('set'):
@@ -289,6 +338,43 @@ class DamageCalculator:
             # Total final damage
             final_damage = total_damage + dot_damage
             
+            # Prepare detailed calculation data
+            calculation_details = {
+                'base_stats': {
+                    'min_damage': min_damage,
+                    'max_damage': max_damage,
+                    'magic_damage': magic_damage,
+                    'base_crit_rate': base_crit_rate,
+                    'base_crit_damage': base_crit_damage
+                },
+                'after_equipment': {
+                    'min_damage': min_damage,
+                    'max_damage': max_damage,
+                    'magic_damage': magic_damage,
+                    'total_crit_rate': total_crit_rate,
+                    'total_crit_damage': total_crit_damage
+                },
+                'after_potions': {
+                    'effective_min_damage': effective_min_damage,
+                    'effective_max_damage': effective_max_damage,
+                    'effective_magic_damage': effective_magic_damage
+                },
+                'set_bonuses': set_bonus_applied,
+                'crit_calculation': {
+                    'crit_rate_percent': crit_rate * 100,
+                    'crit_damage_multiplier': crit_damage_multiplier,
+                    'base_crit_multiplier': base_crit_multiplier
+                },
+                'dot_calculation': {
+                    'burn_chance': burn_chance,
+                    'bleed_chance': bleed_chance,
+                    'poison_chance': poison_chance,
+                    'burn_damage': burn_damage if burn_chance > 0 else 0,
+                    'bleeding_damage': bleeding_damage if bleed_chance > 0 else 0,
+                    'poison_damage': poison_damage if poison_chance > 0 else 0
+                }
+            }
+            
             result = {
                 'success': True,
                 'min_damage': round(min_damage, 2),
@@ -318,7 +404,8 @@ class DamageCalculator:
                     'attack_potion': has_attack_potion,
                     'golden_apple': has_golden_apple
                 },
-                'calculated_stats': use_point_system
+                'calculated_stats': use_point_system,
+                'calculation_details': calculation_details
             }
             
             if use_point_system:
@@ -341,83 +428,83 @@ class DamageCalculator:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-# Weapon Database
+# Weapon Database (更新为掉落范围)
 WEAPON_DB = {
     'wooden_sword': {
         'name': 'Wooden Sword',
         'type': 'sword',
-        'stats': {'atk_min': 5, 'atk_max': 5},
+        'stats': {'atk_min': 5, 'atk_max': 5},  # Fixed value
         'set': 'blessing'
     },
     'wooden_staff': {
         'name': 'Wooden Staff', 
         'type': 'staff',
-        'stats': {'magic': 4},
+        'stats': {'magic': 4},  # Fixed value
         'set': 'blessing'
     },
     'wooden_bow': {
         'name': 'Wooden Bow',
         'type': 'bow', 
-        'stats': {'atk_min': 5, 'atk_max': 5},
+        'stats': {'atk_min': 5, 'atk_max': 5},  # Fixed value
         'set': 'blessing'
     },
     'divine_blade': {
         'name': 'Divine Blade',
         'type': 'sword',
-        'stats': {'atk_min': 75, 'atk_max': 83},
+        'stats': {'atk_min': 75, 'atk_max': 83},  # Drop range
         'set': 'explorer'
     },
     'forest_dweller_staff': {
         'name': 'Forest Dweller\'s Staff',
         'type': 'staff',
-        'stats': {'magic': 60},
+        'stats': {'magic': 60},  # Fixed value
         'set': 'explorer'
     },
     'forest_dweller_bow': {
         'name': 'Forest Dweller\'s Bow',
         'type': 'bow',
-        'stats': {'atk_min': 75, 'atk_max': 83},
+        'stats': {'atk_min': 75, 'atk_max': 83},  # Drop range
         'set': 'explorer'
     },
     'crescendo_scythe': {
         'name': 'Crescendo Scythe',
         'type': 'scythe',
-        'stats': {'atk_min': 75, 'atk_max': 75},
+        'stats': {'atk_min': 75, 'atk_max': 75},  # Fixed value
         'set': 'library_ruina'
     },
     'emerald_staff': {
         'name': 'Emerald Staff',
         'type': 'staff', 
-        'stats': {'magic': 500}
+        'stats': {'magic': 500}  # Fixed value
     },
     'winter_howl': {
         'name': 'Winter Howl',
         'type': 'sword',
-        'stats': {'atk_min': 325, 'atk_max': 360},
+        'stats': {'atk_min': 325, 'atk_max': 360},  # Drop range
         'set': 'wolf_howl'
     },
     'eventide': {
         'name': 'Eventide',
         'type': 'bow',
-        'stats': {'atk_min': 325, 'atk_max': 360},
+        'stats': {'atk_min': 325, 'atk_max': 360},  # Drop range
         'set': 'queen_bee'
     }
 }
 
-# Equipment Database (保持不变)
+# Equipment Database (更新为掉落范围)
 EQUIPMENT_DB = {
     # Tier I
     'hunting_dagger': {
         'name': 'Hunting Dagger',
         'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},
+        'stats': {'atk_min': 5, 'atk_max': 5},  # Fixed value
         'special_effects': {},
         'set': 'explorer'
     },
     'sharpener_rock': {
         'name': 'Sharpener\'s Rock',
         'tier': 'I', 
-        'stats': {'crit_chance': 5, 'crit_damage': 10},
+        'stats': {'crit_chance': 5, 'crit_damage': 10},  # Fixed values
         'special_effects': {}
     },
     
@@ -425,20 +512,20 @@ EQUIPMENT_DB = {
     'ancient_hammer': {
         'name': 'Ancient Hammer',
         'tier': 'II',
-        'stats': {'atk_min': 50, 'atk_max': 50},
+        'stats': {'atk_min': 50, 'atk_max': 50},  # Fixed value
         'special_effects': {}
     },
     'forest_dweller_axe': {
         'name': 'Forest Dweller\'s Axe',
         'tier': 'II',
-        'stats': {'atk_min': 40, 'atk_max': 40, 'crit_chance': 5},
+        'stats': {'atk_min': 40, 'atk_max': 40, 'crit_chance': 5},  # Fixed values
         'special_effects': {'bleed_chance': 0.02},
         'set': 'forest_dweller'
     },
     'volatile_crystal': {
         'name': 'Volatile Crystal',
         'tier': 'II',
-        'stats': {'magic': 45},
+        'stats': {'magic': 45},  # Fixed value
         'special_effects': {}
     },
     
@@ -446,38 +533,38 @@ EQUIPMENT_DB = {
     'alderite_axe': {
         'name': 'Alderite Axe',
         'tier': 'III',
-        'stats': {'atk_min': 175, 'atk_max': 194, 'magic': 140, 'crit_chance': 5},
+        'stats': {'atk_min': 175, 'atk_max': 194, 'magic': 140, 'crit_chance': 5},  # Drop range for atk
         'special_effects': {}
     },
     'aqua_crystal': {
         'name': 'Aqua Crystal',
         'tier': 'III',
-        'stats': {'magic': 110},
+        'stats': {'magic': 110},  # Fixed value
         'special_effects': {}
     },
     'arcane_spellbook': {
         'name': 'Arcane Spellbook',
         'tier': 'III',
-        'stats': {'magic': 100},
+        'stats': {'magic': 100},  # Fixed value
         'special_effects': {}
     },
     'corrupted_fang': {
         'name': 'Corrupted Fang',
         'tier': 'III',
-        'stats': {'magic': 130, 'atk_min': 35, 'atk_max': 35},
+        'stats': {'magic': 130, 'atk_min': 35, 'atk_max': 35},  # Fixed values
         'special_effects': {}
     },
     'daybreak': {
         'name': 'Daybreak',
         'tier': 'III',
-        'stats': {'atk_min': 100, 'atk_max': 111},
+        'stats': {'atk_min': 100, 'atk_max': 111},  # Drop range
         'special_effects': {'burn_chance': 0.52},
         'set': 'flame'
     },
     'enchanted_blade': {
         'name': 'Enchanted Blade',
         'tier': 'III',
-        'stats': {'atk_min': 125, 'atk_max': 125, 'magic': 100},
+        'stats': {'atk_min': 125, 'atk_max': 125, 'magic': 100},  # Fixed values
         'special_effects': {}
     },
     
@@ -485,74 +572,74 @@ EQUIPMENT_DB = {
     'atlantis_armor': {
         'name': 'Atlantis Armor',
         'tier': 'IV',
-        'stats': {'health': 75, 'shield': 10},
+        'stats': {'health': 75, 'shield': 10},  # Fixed values
         'special_effects': {}
     },
     'bee_breastplate': {
         'name': 'Bee Breastplate',
         'tier': 'IV',
-        'stats': {'health': 460, 'shield': 40},
+        'stats': {'health': 460, 'shield': 40},  # Fixed values
         'special_effects': {},
         'set': 'queen_bee'
     },
     'black_wolf_necklace': {
         'name': 'Black Wolf Necklace',
         'tier': 'IV',
-        'stats': {'atk_min': 225, 'atk_max': 249, 'crit_chance': 15, 'crit_damage': 22},
+        'stats': {'atk_min': 225, 'atk_max': 249, 'crit_chance': 15, 'crit_damage': 22},  # Drop range for atk
         'special_effects': {},
         'set': 'wolf_howl'
     },
     'blood_butcher': {
         'name': 'Blood Butcher',
         'tier': 'IV',
-        'stats': {'atk_min': 250, 'atk_max': 277, 'crit_chance': 16},
+        'stats': {'atk_min': 250, 'atk_max': 277, 'crit_chance': 16},  # Drop range for atk
         'special_effects': {'blood_butcher': True},
         'set': 'crimson'
     },
     'crimson_slime_fang': {
         'name': 'Crimson Slime Fang',
         'tier': 'IV',
-        'stats': {'magic': 220, 'crit_damage': 27},
+        'stats': {'magic': 220, 'crit_damage': 27},  # Fixed values
         'special_effects': {},
         'set': 'crimson'
     },
     'cursed_spellbook': {
         'name': 'Cursed Spellbook',
         'tier': 'IV',
-        'stats': {'magic': 400},
+        'stats': {'magic': 400},  # Fixed value
         'special_effects': {'damage_multiplier': 1.3},
         'set': 'crimson'
     },
     'dual_sword': {
         'name': 'Dual Sword',
         'tier': 'IV',
-        'stats': {'atk_min': 135, 'atk_max': 149},
+        'stats': {'atk_min': 135, 'atk_max': 149},  # Drop range
         'special_effects': {'double_damage_chance': 0.15}
     },
     'evernight': {
         'name': 'Evernight',
         'tier': 'IV',
-        'stats': {'atk_min': 450, 'atk_max': 450},
+        'stats': {'atk_min': 450, 'atk_max': 450},  # Fixed value
         'special_effects': {'burn_chance': 0.40},
         'set': 'flame'
     },
     'forest_crown': {
         'name': 'Forest Crown',
         'tier': 'IV',
-        'stats': {'health': 775, 'shield': 275},
+        'stats': {'health': 775, 'shield': 275},  # Fixed values
         'special_effects': {}
     },
     'volcanic_axe': {
         'name': 'Volcanic Axe',
         'tier': 'IV',
-        'stats': {'atk_min': 280, 'atk_max': 280},
+        'stats': {'atk_min': 280, 'atk_max': 280},  # Fixed value
         'special_effects': {'burn_chance': 0.05},
         'set': 'wolf_howl'
     },
     'winter_spirit': {
         'name': 'Winter Spirit',
         'tier': 'IV',
-        'stats': {'atk_min': 200, 'atk_max': 200, 'health': 50},
+        'stats': {'atk_min': 200, 'atk_max': 200, 'health': 50},  # Fixed values
         'special_effects': {'freeze_chance': 0.02}
     },
     
@@ -560,14 +647,14 @@ EQUIPMENT_DB = {
     'queenbee_crown': {
         'name': 'Queen Bee\'s Crown',
         'tier': 'V',
-        'stats': {'atk_min': 800, 'atk_max': 888, 'crit_chance': 20, 'crit_damage': 80},
+        'stats': {'atk_min': 800, 'atk_max': 888, 'crit_chance': 20, 'crit_damage': 80},  # Drop range for atk
         'special_effects': {'bleed_chance': 0.26},
         'set': 'queen_bee'
     },
     'volatile_gem': {
         'name': 'Volatile Gem',
         'tier': 'V',
-        'stats': {'magic': 315},
+        'stats': {'magic': 315},  # Fixed value
         'special_effects': {
             'burn_chance': 0.11,
             'poison_chance': 0.11,
@@ -577,9 +664,24 @@ EQUIPMENT_DB = {
     }
 }
 
+def is_mobile_device(user_agent):
+    """Detect if the request is from a mobile device"""
+    mobile_keywords = [
+        'mobile', 'android', 'iphone', 'ipad', 'ipod', 
+        'blackberry', 'webos', 'windows phone', 'kindle'
+    ]
+    user_agent = user_agent.lower()
+    return any(keyword in user_agent for keyword in mobile_keywords)
+
 @app.route('/')
 def index():
-    return render_template('index.html', equipment_db=EQUIPMENT_DB, weapon_db=WEAPON_DB)
+    user_agent = request.headers.get('User-Agent', '')
+    is_mobile = is_mobile_device(user_agent)
+    
+    return render_template('index.html', 
+                         equipment_db=EQUIPMENT_DB, 
+                         weapon_db=WEAPON_DB,
+                         is_mobile=is_mobile)
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
