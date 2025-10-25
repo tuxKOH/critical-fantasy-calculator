@@ -14,7 +14,8 @@ This means:
 made with AI 67%
 
 what i did?( so dont blame on me)
-- the all data of piece ,passive, weapon caculation logic, web design, and 70% bug fix by me
+- the all data of piece ,passive, weapon caculation logic, web design, and 70% bug fix by me -
+
 -# donation link (..)
 ye that all...
 anyways idk how2 use markdown language so that it~
