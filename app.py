@@ -30,7 +30,7 @@ class DamageCalculator:
     DEF_SHIELD = 17
     DEX_CRIT = 0.8
     BASE_CRIT_RATE = 1.0  # Base 1% crit rate
-    BASE_CRIT_DAMAGE = 100  # Base 100% crit damage
+    BASE_CRIT_DAMAGE = 100  # Base 100% crit damage = 额外100%伤害
     MAX_DEX_CRIT = 50 * DEX_CRIT  # Max 50 dexterity points = 40% crit rate
     
     # Base stats for level 0 character
@@ -255,14 +255,23 @@ class DamageCalculator:
             # Calculate base damage based on damage type
             if damage_type == 'magic':
                 base_damage = effective_magic_damage
+                # For magic damage, crit uses the same base damage
+                crit_base_damage = base_damage
             else:  # attack
                 base_damage = effective_avg_physical_damage
+                # For physical damage, crit uses MAX damage instead of average
+                crit_base_damage = effective_max_damage
             
-            # Calculate base crit damage
+            # Calculate crit damage multiplier
+            # Crit Damage 100% = 额外100%伤害 = 总伤害变成 200% (2倍)
             crit_rate = min(total_crit_rate / 100, 1.0)  # Cap at 100%
-            crit_damage_multiplier = total_crit_damage / 100
-            base_crit_multiplier = 1 + (crit_rate * (crit_damage_multiplier - 1))
-            total_damage = base_damage * base_crit_multiplier
+            crit_damage_multiplier = 1 + (total_crit_damage / 100)  # 100% crit damage = 2x multiplier
+            
+            # Calculate expected damage with crit
+            # Non-crit damage uses base_damage, crit damage uses crit_base_damage * crit_damage_multiplier
+            expected_non_crit_damage = base_damage * (1 - crit_rate)
+            expected_crit_damage = crit_base_damage * crit_damage_multiplier * crit_rate
+            total_damage = expected_non_crit_damage + expected_crit_damage
             
             # Apply equipment effects
             dot_damage = 0
@@ -363,7 +372,9 @@ class DamageCalculator:
                 'crit_calculation': {
                     'crit_rate_percent': crit_rate * 100,
                     'crit_damage_multiplier': crit_damage_multiplier,
-                    'base_crit_multiplier': base_crit_multiplier
+                    'crit_base_damage': crit_base_damage,
+                    'expected_non_crit_damage': expected_non_crit_damage,
+                    'expected_crit_damage': expected_crit_damage
                 },
                 'dot_calculation': {
                     'burn_chance': burn_chance,
@@ -428,83 +439,83 @@ class DamageCalculator:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-# Weapon Database (更新为掉落范围)
+# Weapon Database (保持不变)
 WEAPON_DB = {
     'wooden_sword': {
         'name': 'Wooden Sword',
         'type': 'sword',
-        'stats': {'atk_min': 5, 'atk_max': 5},  # Fixed value
+        'stats': {'atk_min': 5, 'atk_max': 5},
         'set': 'blessing'
     },
     'wooden_staff': {
         'name': 'Wooden Staff', 
         'type': 'staff',
-        'stats': {'magic': 4},  # Fixed value
+        'stats': {'magic': 4},
         'set': 'blessing'
     },
     'wooden_bow': {
         'name': 'Wooden Bow',
         'type': 'bow', 
-        'stats': {'atk_min': 5, 'atk_max': 5},  # Fixed value
+        'stats': {'atk_min': 5, 'atk_max': 5},
         'set': 'blessing'
     },
     'divine_blade': {
         'name': 'Divine Blade',
         'type': 'sword',
-        'stats': {'atk_min': 75, 'atk_max': 83},  # Drop range
+        'stats': {'atk_min': 75, 'atk_max': 83},
         'set': 'explorer'
     },
     'forest_dweller_staff': {
         'name': 'Forest Dweller\'s Staff',
         'type': 'staff',
-        'stats': {'magic': 60},  # Fixed value
+        'stats': {'magic': 60},
         'set': 'explorer'
     },
     'forest_dweller_bow': {
         'name': 'Forest Dweller\'s Bow',
         'type': 'bow',
-        'stats': {'atk_min': 75, 'atk_max': 83},  # Drop range
+        'stats': {'atk_min': 75, 'atk_max': 83},
         'set': 'explorer'
     },
     'crescendo_scythe': {
         'name': 'Crescendo Scythe',
         'type': 'scythe',
-        'stats': {'atk_min': 75, 'atk_max': 75},  # Fixed value
+        'stats': {'atk_min': 75, 'atk_max': 75},
         'set': 'library_ruina'
     },
     'emerald_staff': {
         'name': 'Emerald Staff',
         'type': 'staff', 
-        'stats': {'magic': 500}  # Fixed value
+        'stats': {'magic': 500}
     },
     'winter_howl': {
         'name': 'Winter Howl',
         'type': 'sword',
-        'stats': {'atk_min': 325, 'atk_max': 360},  # Drop range
+        'stats': {'atk_min': 325, 'atk_max': 360},
         'set': 'wolf_howl'
     },
     'eventide': {
         'name': 'Eventide',
         'type': 'bow',
-        'stats': {'atk_min': 325, 'atk_max': 360},  # Drop range
+        'stats': {'atk_min': 325, 'atk_max': 360},
         'set': 'queen_bee'
     }
 }
 
-# Equipment Database (更新为掉落范围)
+# Equipment Database (保持不变)
 EQUIPMENT_DB = {
     # Tier I
     'hunting_dagger': {
         'name': 'Hunting Dagger',
         'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},  # Fixed value
+        'stats': {'atk_min': 5, 'atk_max': 5},
         'special_effects': {},
         'set': 'explorer'
     },
     'sharpener_rock': {
         'name': 'Sharpener\'s Rock',
         'tier': 'I', 
-        'stats': {'crit_chance': 5, 'crit_damage': 10},  # Fixed values
+        'stats': {'crit_chance': 5, 'crit_damage': 10},
         'special_effects': {}
     },
     
@@ -512,20 +523,20 @@ EQUIPMENT_DB = {
     'ancient_hammer': {
         'name': 'Ancient Hammer',
         'tier': 'II',
-        'stats': {'atk_min': 50, 'atk_max': 50},  # Fixed value
+        'stats': {'atk_min': 50, 'atk_max': 50},
         'special_effects': {}
     },
     'forest_dweller_axe': {
         'name': 'Forest Dweller\'s Axe',
         'tier': 'II',
-        'stats': {'atk_min': 40, 'atk_max': 40, 'crit_chance': 5},  # Fixed values
+        'stats': {'atk_min': 40, 'atk_max': 40, 'crit_chance': 5},
         'special_effects': {'bleed_chance': 0.02},
         'set': 'forest_dweller'
     },
     'volatile_crystal': {
         'name': 'Volatile Crystal',
         'tier': 'II',
-        'stats': {'magic': 45},  # Fixed value
+        'stats': {'magic': 45},
         'special_effects': {}
     },
     
@@ -533,38 +544,38 @@ EQUIPMENT_DB = {
     'alderite_axe': {
         'name': 'Alderite Axe',
         'tier': 'III',
-        'stats': {'atk_min': 175, 'atk_max': 194, 'magic': 140, 'crit_chance': 5},  # Drop range for atk
+        'stats': {'atk_min': 175, 'atk_max': 194, 'magic': 140, 'crit_chance': 5},
         'special_effects': {}
     },
     'aqua_crystal': {
         'name': 'Aqua Crystal',
         'tier': 'III',
-        'stats': {'magic': 110},  # Fixed value
+        'stats': {'magic': 110},
         'special_effects': {}
     },
     'arcane_spellbook': {
         'name': 'Arcane Spellbook',
         'tier': 'III',
-        'stats': {'magic': 100},  # Fixed value
+        'stats': {'magic': 100},
         'special_effects': {}
     },
     'corrupted_fang': {
         'name': 'Corrupted Fang',
         'tier': 'III',
-        'stats': {'magic': 130, 'atk_min': 35, 'atk_max': 35},  # Fixed values
+        'stats': {'magic': 130, 'atk_min': 35, 'atk_max': 35},
         'special_effects': {}
     },
     'daybreak': {
         'name': 'Daybreak',
         'tier': 'III',
-        'stats': {'atk_min': 100, 'atk_max': 111},  # Drop range
+        'stats': {'atk_min': 100, 'atk_max': 111},
         'special_effects': {'burn_chance': 0.52},
         'set': 'flame'
     },
     'enchanted_blade': {
         'name': 'Enchanted Blade',
         'tier': 'III',
-        'stats': {'atk_min': 125, 'atk_max': 125, 'magic': 100},  # Fixed values
+        'stats': {'atk_min': 125, 'atk_max': 125, 'magic': 100},
         'special_effects': {}
     },
     
@@ -572,74 +583,74 @@ EQUIPMENT_DB = {
     'atlantis_armor': {
         'name': 'Atlantis Armor',
         'tier': 'IV',
-        'stats': {'health': 75, 'shield': 10},  # Fixed values
+        'stats': {'health': 75, 'shield': 10},
         'special_effects': {}
     },
     'bee_breastplate': {
         'name': 'Bee Breastplate',
         'tier': 'IV',
-        'stats': {'health': 460, 'shield': 40},  # Fixed values
+        'stats': {'health': 460, 'shield': 40},
         'special_effects': {},
         'set': 'queen_bee'
     },
     'black_wolf_necklace': {
         'name': 'Black Wolf Necklace',
         'tier': 'IV',
-        'stats': {'atk_min': 225, 'atk_max': 249, 'crit_chance': 15, 'crit_damage': 22},  # Drop range for atk
+        'stats': {'atk_min': 225, 'atk_max': 249, 'crit_chance': 15, 'crit_damage': 22},
         'special_effects': {},
         'set': 'wolf_howl'
     },
     'blood_butcher': {
         'name': 'Blood Butcher',
         'tier': 'IV',
-        'stats': {'atk_min': 250, 'atk_max': 277, 'crit_chance': 16},  # Drop range for atk
+        'stats': {'atk_min': 250, 'atk_max': 277, 'crit_chance': 16},
         'special_effects': {'blood_butcher': True},
         'set': 'crimson'
     },
     'crimson_slime_fang': {
         'name': 'Crimson Slime Fang',
         'tier': 'IV',
-        'stats': {'magic': 220, 'crit_damage': 27},  # Fixed values
+        'stats': {'magic': 220, 'crit_damage': 27},
         'special_effects': {},
         'set': 'crimson'
     },
     'cursed_spellbook': {
         'name': 'Cursed Spellbook',
         'tier': 'IV',
-        'stats': {'magic': 400},  # Fixed value
+        'stats': {'magic': 400},
         'special_effects': {'damage_multiplier': 1.3},
         'set': 'crimson'
     },
     'dual_sword': {
         'name': 'Dual Sword',
         'tier': 'IV',
-        'stats': {'atk_min': 135, 'atk_max': 149},  # Drop range
+        'stats': {'atk_min': 135, 'atk_max': 149},
         'special_effects': {'double_damage_chance': 0.15}
     },
     'evernight': {
         'name': 'Evernight',
         'tier': 'IV',
-        'stats': {'atk_min': 450, 'atk_max': 450},  # Fixed value
+        'stats': {'atk_min': 450, 'atk_max': 450},
         'special_effects': {'burn_chance': 0.40},
         'set': 'flame'
     },
     'forest_crown': {
         'name': 'Forest Crown',
         'tier': 'IV',
-        'stats': {'health': 775, 'shield': 275},  # Fixed values
+        'stats': {'health': 775, 'shield': 275},
         'special_effects': {}
     },
     'volcanic_axe': {
         'name': 'Volcanic Axe',
         'tier': 'IV',
-        'stats': {'atk_min': 280, 'atk_max': 280},  # Fixed value
+        'stats': {'atk_min': 280, 'atk_max': 280},
         'special_effects': {'burn_chance': 0.05},
         'set': 'wolf_howl'
     },
     'winter_spirit': {
         'name': 'Winter Spirit',
         'tier': 'IV',
-        'stats': {'atk_min': 200, 'atk_max': 200, 'health': 50},  # Fixed values
+        'stats': {'atk_min': 200, 'atk_max': 200, 'health': 50},
         'special_effects': {'freeze_chance': 0.02}
     },
     
@@ -647,14 +658,14 @@ EQUIPMENT_DB = {
     'queenbee_crown': {
         'name': 'Queen Bee\'s Crown',
         'tier': 'V',
-        'stats': {'atk_min': 800, 'atk_max': 888, 'crit_chance': 20, 'crit_damage': 80},  # Drop range for atk
+        'stats': {'atk_min': 800, 'atk_max': 888, 'crit_chance': 20, 'crit_damage': 80},
         'special_effects': {'bleed_chance': 0.26},
         'set': 'queen_bee'
     },
     'volatile_gem': {
         'name': 'Volatile Gem',
         'tier': 'V',
-        'stats': {'magic': 315},  # Fixed value
+        'stats': {'magic': 315},
         'special_effects': {
             'burn_chance': 0.11,
             'poison_chance': 0.11,
