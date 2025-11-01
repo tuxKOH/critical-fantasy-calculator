@@ -72,9 +72,8 @@ Copyright (C) 2024  @tux_koh
             font-size: 14px;
         }
         
-        .calculate-btn, .extra-data-btn {
+        .calculate-btn, .extra-data-btn, .optimize-btn {
             width: 100%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
             padding: 12px;
@@ -84,9 +83,28 @@ Copyright (C) 2024  @tux_koh
             margin-top: 15px;
         }
         
+        .calculate-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
         .extra-data-btn {
             background: linear-gradient(135deg, #28a745, #20c997);
             margin-top: 10px;
+        }
+        
+        .optimize-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+        
+        .small-btn {
+            padding: 5px 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 10px;
         }
         
         .result {
@@ -199,6 +217,56 @@ Copyright (C) 2024  @tux_koh
         .forest-set-indicator { background: #20c997; color: white; }
         .library-set-indicator { background: #6f42c1; color: white; }
         .blessing-set-indicator { background: #17a2b8; color: white; }
+
+        /* Optimization Results */
+        .optimize-result {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .optimize-combo {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .optimize-combo h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .optimize-combo button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .optimization-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 12px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
 
         /* Desktop Styles */
         @media (min-width: 768px) {
@@ -689,6 +757,15 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
 
+                <!-- Player Level -->
+                <div class="panel-section">
+                    <h3>Player Level</h3>
+                    <div class="form-group">
+                        <label for="playerLevel">Current Level:</label>
+                        <input type="number" id="playerLevel" min="1" max="190" value="190" onchange="updateEquipmentDisplay(); calculateDamage();">
+                    </div>
+                </div>
+
                 <!-- Weapon Selection -->
                 <div class="panel-section">
                     <h3>Weapon Selection</h3>
@@ -714,7 +791,7 @@ Copyright (C) 2024  @tux_koh
                 
                 <!-- Attribute Points Section -->
                 <div class="panel-section" id="pointsSection">
-                    <h3>Attribute Points (Level 190)</h3>
+                    <h3>Attribute Points (Level 190) <button class="small-btn" onclick="optimizeStats()">Optimize Stats</button></h3>
                     <div class="attribute-points">
                         <div class="point-input">
                             <label for="strength">Strength:</label>
@@ -738,7 +815,7 @@ Copyright (C) 2024  @tux_koh
                         </div>
                     </div>
                     <div class="points-info">
-                        <p>Total Points: <span id="totalPoints">0</span> / 380</p>
+                        <p>Total Points: <span id="totalPoints">0</span> / <span id="maxPoints">380</span> (Level × 2)</p>
                         <p>Remaining: <span id="remainingPoints">380</span></p>
                         <p style="color: #666;">Dexterity capped at 50 points</p>
                     </div>
@@ -848,6 +925,10 @@ Copyright (C) 2024  @tux_koh
                                 <span class="result-label">DoT Damage:</span>
                                 <span class="result-value" id="resultDot">0</span>
                             </div>
+                            <div class="result-item">
+                                <span class="result-label">3-Hit Total:</span>
+                                <span class="result-value" id="resultThreeHit">0</span>
+                            </div>
                         </div>
                         <div>
                             <div class="result-item">
@@ -862,6 +943,10 @@ Copyright (C) 2024  @tux_koh
                                 <span class="result-label">Crit Rate:</span>
                                 <span class="result-value" id="resultCritRate">0%</span>
                             </div>
+                            <div class="result-item">
+                                <span class="result-label">Attack Mechanic:</span>
+                                <span class="result-value" id="resultMechanic">Default</span>
+                            </div>
                         </div>
                     </div>
                     <div class="result-item">
@@ -875,8 +960,23 @@ Copyright (C) 2024  @tux_koh
                     
                     <button class="extra-data-btn" onclick="showExtraData()">Show Extra Data</button>
                 </div>
-                
+
                 <button class="calculate-btn" onclick="calculateDamage()">Calculate Damage</button>
+                <button class="optimize-btn" onclick="optimizeDamageAdvanced()" id="optimizeBtn">Find Best Combinations</button>
+                
+                <!-- Optimization Results -->
+                <div class="panel-section optimize-result" id="optimizeResultSection" style="display: none;">
+                    <h3>Top Damage Combinations</h3>
+                    <div class="optimization-filters">
+                        <button class="filter-btn active" onclick="setOptimizationType('final_damage')">Final Damage Top 10</button>
+                        <button class="filter-btn" onclick="setOptimizationType('three_hit')">3-Hit Total Top 10</button>
+                        <button class="filter-btn" onclick="setOptimizationType('first_hit')">First Hit Top 10</button>
+                        <button class="filter-btn" onclick="setOptimizationType('dot')">DoT Damage Top 10</button>
+                    </div>
+                    <div id="optimizeResultsContent">
+                        <!-- Optimization results will be populated here -->
+                    </div>
+                </div>
                 
                 <div class="note">
                     <strong>Note:</strong> DoT damage calculated separately. Flame Set bonus (+10% burn chance) with 2+ items. Damage type determined by weapon (Staff = Magic, Others = Physical).
@@ -887,7 +987,6 @@ Copyright (C) 2024  @tux_koh
         <div class="footer">
             <p>made by <strong>@tux_koh</strong></p>
             <p><a href="https://www.roblox.com/game-pass/1540670718/donation" target="_blank">donate me 10 bobux :D</a></p>
-            <p>ping me in dc if any bug or mistake, thanks!!</p>
         </div>
     </div>
 
@@ -913,6 +1012,7 @@ Copyright (C) 2024  @tux_koh
         let currentTierFilter = 'all';
         let currentSearchFilter = '';
         let currentResult = null;
+        let currentOptimizationType = 'final_damage';
         
         // Set indicator mapping
         const setIndicators = {
@@ -945,6 +1045,15 @@ Copyright (C) 2024  @tux_koh
             div.className = 'equipment-item';
             div.setAttribute('data-id', id);
             div.setAttribute('data-tier', data.tier);
+            
+            // Check level requirement
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+            const levelReq = data.level_req || 0;
+            const meetsLevelReq = levelReq <= playerLevel;
+            
+            if (!meetsLevelReq) {
+                div.style.opacity = '0.6';
+            }
             
             // Build stats string
             const stats = [];
@@ -1002,16 +1111,28 @@ Copyright (C) 2024  @tux_koh
                 setIndicator = `<span class="${setInfo.class} set-indicators">${setInfo.text}</span>`;
             }
             
+            // Add level requirement info
+            let levelInfo = '';
+            if (levelReq > 0) {
+                levelInfo = `<span style="color: ${meetsLevelReq ? '#28a745' : '#dc3545'}; font-size: 0.8em;">Lv. ${levelReq}</span>`;
+            }
+            
             div.innerHTML = `
                 <div class="equipment-header">
-                    <div class="equipment-name">${data.name} ${setIndicator}</div>
+                    <div class="equipment-name">${data.name} ${levelInfo} ${setIndicator}</div>
                     <div class="equipment-tier">T${data.tier}</div>
                 </div>
                 <div class="equipment-stats">${stats.join(', ')}</div>
                 <div class="equipment-effects">${effects.join(', ')}</div>
             `;
             
-            div.addEventListener('click', () => toggleEquipmentSelection(id, data));
+            // Only allow selection if level requirement is met
+            if (meetsLevelReq) {
+                div.addEventListener('click', () => toggleEquipmentSelection(id, data));
+            } else {
+                div.style.cursor = 'not-allowed';
+                div.title = `Requires Level ${levelReq}`;
+            }
             
             return div;
         }
@@ -1039,6 +1160,26 @@ Copyright (C) 2024  @tux_koh
             });
             event.target.classList.add('active');
             initializeEquipment();
+        }
+        
+        // Update equipment display when level changes
+        function updateEquipmentDisplay() {
+            initializeEquipment();
+            // Remove equipment that no longer meets level requirements
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+            selectedEquipment = selectedEquipment.filter(id => {
+                const eqData = equipmentDatabase[id];
+                const meetsLevelReq = (eqData.level_req || 0) <= playerLevel;
+                if (!meetsLevelReq) {
+                    const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
+                    if (element) element.classList.remove('selected');
+                }
+                return meetsLevelReq;
+            });
+            updateSelectedEquipmentDisplay();
+            addPointLimits();
+            updatePoints();
+            calculateDamage();
         }
         
         // Toggle equipment selection
@@ -1118,8 +1259,15 @@ Copyright (C) 2024  @tux_koh
                     setInfo = `<span class="${setData.class} set-indicators">${setData.text}</span>`;
                 }
                 
+                // Add level requirement
+                const levelReq = weapon.level_req || 0;
+                let levelInfo = '';
+                if (levelReq > 0) {
+                    levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
+                }
+                
                 weaponInfo.innerHTML = `
-                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}<br>
+                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}<br>
                     ${stats.join(', ')}
                 `;
             } else {
@@ -1144,22 +1292,40 @@ Copyright (C) 2024  @tux_koh
             const intelligence = parseInt(document.getElementById('intelligence').value) || 0;
             const dexterity = parseInt(document.getElementById('dexterity').value) || 0;
             const defense = parseInt(document.getElementById('defense').value) || 0;
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
             
             const total = strength + vitality + intelligence + dexterity + defense;
+            const maxPoints = playerLevel * 2;
+            
             document.getElementById('totalPoints').textContent = total;
-            document.getElementById('remainingPoints').textContent = 380 - total;
+            document.getElementById('remainingPoints').textContent = maxPoints - total;
+            document.getElementById('maxPoints').textContent = maxPoints;
+            
+            // Update title display
+            document.querySelector('#pointsSection h3').innerHTML = `Attribute Points (Level ${playerLevel}) <button class="small-btn" onclick="optimizeStats()">Optimize Stats</button>`;
             
             calculateDamage();
+        }
+        
+        // Set optimization type
+        function setOptimizationType(type) {
+            currentOptimizationType = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
         }
         
         // Main damage calculation function
         function calculateDamage() {
             const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
             const selectedWeapon = document.getElementById('weaponSelect').value;
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
             
             const data = {
                 usePointSystem: usePointSystem,
                 selectedWeapon: selectedWeapon,
+                playerLevel: playerLevel,
                 equipment: selectedEquipment,
                 magicPotion: document.getElementById('magicPotion').checked,
                 attackPotion: document.getElementById('attackPotion').checked,
@@ -1207,6 +1373,12 @@ Copyright (C) 2024  @tux_koh
                     document.getElementById('resultCritDamage').textContent = result.crit_damage.toLocaleString() + '%';
                     document.getElementById('resultDamageType').textContent = result.damage_type === 'magic' ? 'Magic' : 'Physical';
                     
+                    // Update three hit damage display
+                    if (result.three_hit_damage) {
+                        document.getElementById('resultThreeHit').textContent = result.three_hit_damage.total_damage.toLocaleString();
+                        document.getElementById('resultMechanic').textContent = result.three_hit_damage.mechanic;
+                    }
+                    
                     // Show player stats if using point system
                     if (result.calculated_stats && result.player_stats) {
                         document.getElementById('playerStatsSection').style.display = 'block';
@@ -1253,6 +1425,168 @@ Copyright (C) 2024  @tux_koh
             .catch(error => {
                 console.error('Error calculating damage:', error);
             });
+        }
+        
+        // Optimize damage function
+        function optimizeDamageAdvanced() {
+            const optimizeBtn = document.getElementById('optimizeBtn');
+            optimizeBtn.textContent = 'Calculating...';
+            optimizeBtn.disabled = true;
+
+            const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
+            const selectedWeapon = document.getElementById('weaponSelect').value;
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+            
+            const data = {
+                usePointSystem: usePointSystem,
+                selectedWeapon: selectedWeapon,
+                playerLevel: playerLevel,
+                magicPotion: document.getElementById('magicPotion').checked,
+                attackPotion: document.getElementById('attackPotion').checked,
+                goldenApple: document.getElementById('goldenApple').checked,
+                optimizationType: currentOptimizationType
+            };
+            
+            if (usePointSystem) {
+                data.strength = parseInt(document.getElementById('strength').value) || 0;
+                data.vitality = parseInt(document.getElementById('vitality').value) || 0;
+                data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
+                data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
+                data.defense = parseInt(document.getElementById('defense').value) || 0;
+            } else {
+                data.minDamage = document.getElementById('minDamage').value;
+                data.maxDamage = document.getElementById('maxDamage').value;
+                data.magicDamage = document.getElementById('magicDamage').value;
+                data.critRate = document.getElementById('critRate').value;
+                data.critDamage = document.getElementById('critDamage').value;
+            }
+            
+            fetch('/optimize_advanced', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    displayOptimizationResults(result);
+                } else {
+                    alert('Optimization failed: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error optimizing damage:', error);
+                alert('Optimization failed due to an error.');
+            })
+            .finally(() => {
+                optimizeBtn.textContent = 'Find Best Combinations';
+                optimizeBtn.disabled = false;
+            });
+        }
+
+        // Display optimization results
+        function displayOptimizationResults(result) {
+            const section = document.getElementById('optimizeResultSection');
+            const content = document.getElementById('optimizeResultsContent');
+            
+            let html = `<p>Tested ${result.total_combinations_tested.toLocaleString()} combinations (${result.available_equipment_count} available equipment)</p>`;
+            
+            const scoreLabel = {
+                'final_damage': 'Final Damage',
+                'three_hit': '3-Hit Total', 
+                'first_hit': 'First Hit',
+                'dot': 'DoT Damage'
+            }[result.optimization_type] || 'Score';
+            
+            result.top_combinations.forEach((combo, index) => {
+                html += `
+                    <div class="optimize-combo">
+                        <h4>#${index + 1} - ${scoreLabel}: ${combo.score.toLocaleString()}</h4>
+                        <p><strong>Final Damage:</strong> ${combo.final_damage.toLocaleString()}</p>
+                        <p><strong>3-Hit Total:</strong> ${combo.three_hit_total.toLocaleString()}</p>
+                        <p><strong>First Hit:</strong> ${combo.first_hit.toLocaleString()}</p>
+                        <p><strong>DoT Damage:</strong> ${combo.dot_damage.toLocaleString()}</p>
+                        <p><strong>Equipment:</strong> ${combo.equipment_names.join(', ')}</p>
+                        <p><strong>Crit:</strong> ${combo.crit_rate}% rate, ${combo.crit_damage}% damage</p>
+                        <button onclick="applyOptimizedCombo(${JSON.stringify(combo.equipment_ids).replace(/"/g, '&quot;')})">Apply This Combo</button>
+                    </div>
+                `;
+            });
+            
+            content.innerHTML = html;
+            section.style.display = 'block';
+        }
+
+        // Apply optimized combination
+        function applyOptimizedCombo(equipmentIds) {
+            // Clear current selection
+            selectedEquipment.forEach(id => {
+                const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
+                if (element) element.classList.remove('selected');
+            });
+            
+            // Select new equipment
+            selectedEquipment = [...equipmentIds];
+            selectedEquipment.forEach(id => {
+                const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
+                if (element) element.classList.add('selected');
+            });
+            
+            updateSelectedEquipmentDisplay();
+            calculateDamage();
+            
+            // Scroll to results
+            document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Stats optimization function
+        function optimizeStats() {
+            const vitality = parseInt(document.getElementById('vitality').value) || 0;
+            const selectedWeapon = document.getElementById('weaponSelect').value;
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+            
+            const data = {
+                vitality: vitality,
+                selectedWeapon: selectedWeapon,
+                playerLevel: playerLevel
+            };
+            
+            fetch('/optimize_stats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    applyOptimizedStats(result.recommendation);
+                } else {
+                    alert('Stats optimization failed: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error optimizing stats:', error);
+                alert('Stats optimization failed due to an error.');
+            });
+        }
+
+        // Apply optimized stats
+        function applyOptimizedStats(recommendation) {
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+            
+            document.getElementById('strength').value = recommendation.strength;
+            document.getElementById('intelligence').value = recommendation.intelligence;
+            document.getElementById('dexterity').value = recommendation.dexterity;
+            document.getElementById('defense').value = recommendation.defense;
+            
+            updatePoints();
+            calculateDamage();
+            
+            alert(`Optimized stats applied!\n${recommendation.reason}\n\nStrength: ${recommendation.strength}\nIntelligence: ${recommendation.intelligence}\nDexterity: ${recommendation.dexterity}\nDefense: ${recommendation.defense}\n\nTotal Used: ${recommendation.total_used}/${playerLevel * 2}`);
         }
         
         // Show extra data modal
@@ -1312,8 +1646,8 @@ Copyright (C) 2024  @tux_koh
                         <span>${details.crit_calculation.crit_damage_multiplier.toFixed(2)}x</span>
                     </div>
                     <div class="detail-item">
-                        <span>Base Crit Multiplier:</span>
-                        <span>${details.crit_calculation.base_crit_multiplier.toFixed(2)}x</span>
+                        <span>Crit Base Damage:</span>
+                        <span>${details.crit_calculation.crit_base_damage.toLocaleString()}</span>
                     </div>
                 </div>
                 
@@ -1369,6 +1703,19 @@ Copyright (C) 2024  @tux_koh
             }
         }
         
+        // Add point limits to input fields
+        function addPointLimits() {
+            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+            const maxPoints = playerLevel * 2;
+            
+            // Set input field maximum values
+            document.getElementById('strength').max = maxPoints;
+            document.getElementById('vitality').max = maxPoints;
+            document.getElementById('intelligence').max = maxPoints;
+            document.getElementById('dexterity').max = 50; // DEX still capped at 50
+            document.getElementById('defense').max = maxPoints;
+        }
+
         // Auto-calculate when inputs change
         document.getElementById('minDamage')?.addEventListener('input', calculateDamage);
         document.getElementById('maxDamage')?.addEventListener('input', calculateDamage);
@@ -1379,6 +1726,7 @@ Copyright (C) 2024  @tux_koh
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
             initializeEquipment();
+            addPointLimits();
             updatePoints();
             updateWeaponInfo();
             calculateDamage();
