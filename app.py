@@ -142,8 +142,8 @@ class DamageCalculator:
             }
         
         elif weapon_type in ['sword', 'blade']:  # Chain (Blade)
-            # Combo damage: 1x, 3x, 6x (arithmetic sequence)
-            hit_multipliers = [1, 3, 6]
+            # Combo damage: 1x, 2x, 3x (arithmetic sequence)
+            hit_multipliers = [1, 2, 3]
             hits_damage = [
                 (base_damage_per_hit * multiplier + dot_damage_per_hit) 
                 for multiplier in hit_multipliers
@@ -156,7 +156,7 @@ class DamageCalculator:
                 'hit_3': hits_damage[2],
                 'bonus_damage': 0,
                 'total_damage': total_damage,
-                'mechanic': 'Chain: 1x, 3x, 6x combo damage'
+                'mechanic': 'Chain: 1x, 2x, 3x combo damage'
             }
         
         elif weapon_type == 'scythe':  # Reverberation (Scythe)
