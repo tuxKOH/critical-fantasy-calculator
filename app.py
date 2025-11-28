@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from flask import Flask, render_template, request, jsonify
 import math
 from itertools import combinations
-
+from data import EQUIPMENT_DB , WEAPON_DB
 app = Flask(__name__)
 
 class DamageCalculator:
@@ -104,86 +104,92 @@ class DamageCalculator:
         }
     
     @staticmethod
-    def calculate_three_hit_damage(base_damage, dot_damage, weapon_type, crit_multiplied_damage):
-        """Calculate damage for 3 hits based on weapon type and class mechanics"""
+    def calculate_ten_second_damage(base_damage, dot_damage, weapon_type, crit_multiplied_damage):
+        """Calculate damage for 10 seconds based on weapon type and class mechanics"""
         
         # Base damage per hit (without DoT)
         base_damage_per_hit = crit_multiplied_damage
         dot_damage_per_hit = dot_damage
         
         if weapon_type == 'staff':  # Flow (Mage)
-            # Each hit: 100% magic damage + DoT
-            # After 3 hits: extra 300% damage
-            three_hits_damage = (base_damage_per_hit + dot_damage_per_hit) * 3
-            bonus_damage = base_damage_per_hit * 3  # 300% bonus
-            total_damage = three_hits_damage + bonus_damage
+            # 4 hits in 10 seconds: 7x total multiplier + DoT
+            total_base_damage = base_damage_per_hit * 7
+            total_dot_damage = dot_damage_per_hit * 4
+            total_damage = total_base_damage + total_dot_damage
             
             return {
                 'hit_1': base_damage_per_hit + dot_damage_per_hit,
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
-                'bonus_damage': bonus_damage,
+                'hit_4': base_damage_per_hit + dot_damage_per_hit,
+                'bonus_damage': base_damage_per_hit * 3,  # 7x total = 4 hits + 3x bonus
                 'total_damage': total_damage,
-                'mechanic': 'Flow: 100% per hit + 300% bonus after 3 hits'
+                'mechanic': 'Flow: 7x total damage in 10 seconds (4 hits)'
             }
         
         elif weapon_type == 'bow':  # Brust (Archer)
-            # Double damage on all hits
-            three_hits_damage = (base_damage_per_hit * 2 + dot_damage_per_hit) * 3
-            bonus_damage = 0
-            
-            return {
-                'hit_1': base_damage_per_hit * 2 + dot_damage_per_hit,
-                'hit_2': base_damage_per_hit * 2 + dot_damage_per_hit,
-                'hit_3': base_damage_per_hit * 2 + dot_damage_per_hit,
-                'bonus_damage': bonus_damage,
-                'total_damage': three_hits_damage,
-                'mechanic': 'Brust: 200% damage per hit'
-            }
-        
-        elif weapon_type in ['sword', 'blade']:  # Chain (Blade)
-            # Combo damage: 1x, 2x, 3x (arithmetic sequence)
-            hit_multipliers = [1, 2, 3]
-            hits_damage = [
-                (base_damage_per_hit * multiplier + dot_damage_per_hit) 
-                for multiplier in hit_multipliers
-            ]
-            total_damage = sum(hits_damage)
-            
-            return {
-                'hit_1': hits_damage[0],
-                'hit_2': hits_damage[1],
-                'hit_3': hits_damage[2],
-                'bonus_damage': 0,
-                'total_damage': total_damage,
-                'mechanic': 'Chain: 1x, 2x, 3x combo damage'
-            }
-        
-        elif weapon_type == 'scythe':  # Reverberation (Scythe)
-            # 25% chance for 4x damage on each hit
-            # Calculate expected damage considering probability
-            expected_damage_per_hit = (base_damage_per_hit * 4 * 0.25) + (base_damage_per_hit * 0.75) + dot_damage_per_hit
-            three_hits_damage = expected_damage_per_hit * 3
-            
-            return {
-                'hit_1': expected_damage_per_hit,
-                'hit_2': expected_damage_per_hit,
-                'hit_3': expected_damage_per_hit,
-                'bonus_damage': 0,
-                'total_damage': three_hits_damage,
-                'mechanic': 'Reverberation: 25% chance for 400% damage'
-            }
-        
-        else:  # Default (no special mechanic)
-            three_hits_damage = (base_damage_per_hit + dot_damage_per_hit) * 3
+            # 4 hits in 10 seconds: 7x total multiplier + DoT
+            total_base_damage = base_damage_per_hit * 7
+            total_dot_damage = dot_damage_per_hit * 4
+            total_damage = total_base_damage + total_dot_damage
             
             return {
                 'hit_1': base_damage_per_hit + dot_damage_per_hit,
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
+                'hit_4': base_damage_per_hit + dot_damage_per_hit,
+                'bonus_damage': base_damage_per_hit * 3,  # 7x total = 4 hits + 3x bonus
+                'total_damage': total_damage,
+                'mechanic': 'Brust: 7x total damage in 10 seconds (4 hits)'
+            }
+        
+        elif weapon_type in ['sword', 'blade']:  # Chain (Blade)
+            # 5 hits in 10 seconds: 8.5x total multiplier + DoT
+            total_base_damage = base_damage_per_hit * 8.5
+            total_dot_damage = dot_damage_per_hit * 5
+            total_damage = total_base_damage + total_dot_damage
+            
+            return {
+                'hit_1': base_damage_per_hit + dot_damage_per_hit,
+                'hit_2': base_damage_per_hit + dot_damage_per_hit,
+                'hit_3': base_damage_per_hit + dot_damage_per_hit,
+                'hit_4': base_damage_per_hit + dot_damage_per_hit,
+                'hit_5': base_damage_per_hit + dot_damage_per_hit,
+                'bonus_damage': base_damage_per_hit * 3.5,  # 8.5x total = 5 hits + 3.5x bonus
+                'total_damage': total_damage,
+                'mechanic': 'Chain: 8.5x total damage in 10 seconds (5 hits)'
+            }
+        
+        elif weapon_type == 'scythe':  # Reverberation (Scythe)
+            # 4 hits in 10 seconds: 4.8x total multiplier + DoT
+            total_base_damage = base_damage_per_hit * 4.8
+            total_dot_damage = dot_damage_per_hit * 4
+            total_damage = total_base_damage + total_dot_damage
+            
+            return {
+                'hit_1': base_damage_per_hit + dot_damage_per_hit,
+                'hit_2': base_damage_per_hit + dot_damage_per_hit,
+                'hit_3': base_damage_per_hit + dot_damage_per_hit,
+                'hit_4': base_damage_per_hit + dot_damage_per_hit,
+                'bonus_damage': base_damage_per_hit * 0.8,  # 4.8x total = 4 hits + 0.8x bonus
+                'total_damage': total_damage,
+                'mechanic': 'Reverberation: 4.8x total damage in 10 seconds (4 hits)'
+            }
+        
+        else:  # Default (no special mechanic)
+            # Assume 4 hits in 10 seconds for default
+            total_base_damage = base_damage_per_hit * 4
+            total_dot_damage = dot_damage_per_hit * 4
+            total_damage = total_base_damage + total_dot_damage
+            
+            return {
+                'hit_1': base_damage_per_hit + dot_damage_per_hit,
+                'hit_2': base_damage_per_hit + dot_damage_per_hit,
+                'hit_3': base_damage_per_hit + dot_damage_per_hit,
+                'hit_4': base_damage_per_hit + dot_damage_per_hit,
                 'bonus_damage': 0,
-                'total_damage': three_hits_damage,
-                'mechanic': 'Default: 100% damage per hit'
+                'total_damage': total_damage,
+                'mechanic': 'Default: 4x damage in 10 seconds (4 hits)'
             }
     
     @staticmethod
@@ -437,9 +443,9 @@ class DamageCalculator:
             # Total final damage
             final_damage = total_damage + dot_damage
             
-            # Calculate three hit damage
+            # Calculate ten second damage
             weapon_type = WEAPON_DB.get(selected_weapon, {}).get('type', 'sword') if selected_weapon else 'sword'
-            three_hit_data = DamageCalculator.calculate_three_hit_damage(
+            ten_second_data = DamageCalculator.calculate_ten_second_damage(
                 base_damage, dot_damage, weapon_type, total_damage
             )
             
@@ -512,13 +518,15 @@ class DamageCalculator:
                     'golden_apple': has_golden_apple
                 },
                 'calculated_stats': use_point_system,
-                'three_hit_damage': {
-                    'hit_1': round(three_hit_data['hit_1'], 2),
-                    'hit_2': round(three_hit_data['hit_2'], 2),
-                    'hit_3': round(three_hit_data['hit_3'], 2),
-                    'bonus_damage': round(three_hit_data['bonus_damage'], 2),
-                    'total_damage': round(three_hit_data['total_damage'], 2),
-                    'mechanic': three_hit_data['mechanic']
+                'ten_second_damage': {
+                    'hit_1': round(ten_second_data['hit_1'], 2),
+                    'hit_2': round(ten_second_data['hit_2'], 2),
+                    'hit_3': round(ten_second_data['hit_3'], 2),
+                    'hit_4': round(ten_second_data.get('hit_4', 0), 2),
+                    'hit_5': round(ten_second_data.get('hit_5', 0), 2),
+                    'bonus_damage': round(ten_second_data['bonus_damage'], 2),
+                    'total_damage': round(ten_second_data['total_damage'], 2),
+                    'mechanic': ten_second_data['mechanic']
                 },
                 'calculation_details': calculation_details
             }
@@ -543,389 +551,9 @@ class DamageCalculator:
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
-# Weapon Database with level requirements
-WEAPON_DB = {
-    'wooden_sword': {
-        'name': 'Wooden Sword',
-        'type': 'sword',
-        'stats': {'atk_min': 5, 'atk_max': 5},
-        'set': 'blessing',
-        'level_req': 1
-    },
-    'wooden_staff': {
-        'name': 'Wooden Staff', 
-        'type': 'staff',
-        'stats': {'magic': 4},
-        'set': 'blessing',
-        'level_req': 1
-    },
-    'wooden_bow': {
-        'name': 'Wooden Bow',
-        'type': 'bow', 
-        'stats': {'atk_min': 5, 'atk_max': 5},
-        'set': 'blessing',
-        'level_req': 1
-    },
-    'divine_blade': {
-        'name': 'Divine Blade',
-        'type': 'sword',
-        'stats': {'atk_min': 75, 'atk_max': 83},
-        'set': 'explorer',
-        'level_req': 15
-    },
-    'forest_dweller_staff': {
-        'name': 'Forest Dweller\'s Staff',
-        'type': 'staff',
-        'stats': {'magic': 60},
-        'set': 'explorer',
-        'level_req': 15
-    },
-    'forest_dweller_bow': {
-        'name': 'Forest Dweller\'s Bow',
-        'type': 'bow',
-        'stats': {'atk_min': 75, 'atk_max': 83},
-        'set': 'explorer',
-        'level_req': 15
-    },
-    'crescendo_scythe': {
-        'name': 'Crescendo Scythe',
-        'type': 'scythe',
-        'stats': {'atk_min': 75, 'atk_max': 75},
-        'set': 'library_ruina',
-        'level_req': 15
-    },
-    'emerald_staff': {
-        'name': 'Emerald Staff',
-        'type': 'staff', 
-        'stats': {'magic': 500},
-        'level_req': 65
-    },
-    'winter_howl': {
-        'name': 'Winter Howl',
-        'type': 'sword',
-        'stats': {'atk_min': 325, 'atk_max': 360},
-        'set': 'wolf_howl',
-        'level_req': 65
-    },
-    'eventide': {
-        'name': 'Eventide',
-        'type': 'bow',
-        'stats': {'atk_min': 325, 'atk_max': 360},
-        'set': 'queen_bee',
-        'level_req': 65
-    }
-}
+
 
 # Equipment Database with level requirements
-EQUIPMENT_DB = {
-    # Tier I
-    'burning_torch': {
-        'name': 'Burning Torch',
-        'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},
-        'special_effects': {},
-        'level_req': 1
-    },
-    'climbing_hook': {
-        'name': 'Climbing Hook',
-        'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},
-        'special_effects': {},
-        'level_req': 1
-    },
-    'hunting_dagger': {
-        'name': 'Hunting Dagger',
-        'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},
-        'special_effects': {},
-        'set': 'explorer',
-        'level_req': 1
-    },
-    'lantern': {
-        'name': 'Lantern',
-        'tier': 'I',
-        'stats': {'magic': 5},
-        'special_effects': {},
-        'level_req': 5
-    },
-    'metal_plate': {
-        'name': 'Metal Plate',
-        'tier': 'I',
-        'stats': {'shield': 10},
-        'special_effects': {},
-        'level_req': 2
-    },
-    'mining_pickaxe': {
-        'name': 'Mining Pickaxe',
-        'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},
-        'special_effects': {},
-        'level_req': 1
-    },
-    'rabbits_foot': {
-        'name': 'Rabbit\'s Foot',
-        'tier': 'I',
-        'stats': {'crit_chance': 3},
-        'special_effects': {},
-        'level_req': 5
-    },
-    'sharpener_rock': {
-        'name': 'Sharpener\'s Rock',
-        'tier': 'I', 
-        'stats': {'crit_chance': 5, 'crit_damage': 10},
-        'special_effects': {},
-        'level_req': 10
-    },
-    'travellers_boots': {
-        'name': 'Traveller\'s Boots',
-        'tier': 'I',
-        'stats': {'health': 20},
-        'special_effects': {},
-        'level_req': 1
-    },
-    
-    # Tier II
-    'adventurers_kit': {
-        'name': 'Adventurer\'s Kit',
-        'tier': 'II',
-        'stats': {'health': 50, 'shield': 10},
-        'special_effects': {},
-        'level_req': 25
-    },
-    'ancient_hammer': {
-        'name': 'Ancient Hammer',
-        'tier': 'II',
-        'stats': {'atk_min': 50, 'atk_max': 50},
-        'special_effects': {},
-        'level_req': 10
-    },
-    'ancient_wood_armor': {
-        'name': 'Ancient Wood Armor',
-        'tier': 'II',
-        'stats': {'health': 80, 'shield': 15},
-        'special_effects': {},
-        'level_req': 10
-    },
-    'copper_sword': {
-        'name': 'Copper Sword',
-        'tier': 'II',
-        'stats': {'atk_min': 30, 'atk_max': 30},
-        'special_effects': {},
-        'level_req': 5
-    },
-    'dual_sword': {
-        'name': 'Dual Sword',
-        'tier': 'II',
-        'stats': {'atk_min': 135, 'atk_max': 149},
-        'special_effects': {'double_damage_chance': 0.15},
-        'level_req': 100
-    },
-    'forest_dweller_axe': {
-        'name': 'Forest Dweller\'s Axe',
-        'tier': 'II',
-        'stats': {'atk_min': 40, 'atk_max': 40, 'crit_chance': 5},
-        'special_effects': {'bleed_chance': 0.02},
-        'set': 'forest_dweller',
-        'level_req': 10
-    },
-    'volatile_crystal': {
-        'name': 'Volatile Crystal',
-        'tier': 'II',
-        'stats': {'magic': 45},
-        'special_effects': {},
-        'level_req': 5
-    },
-    
-    # Tier III
-    'alderite_axe': {
-        'name': 'Alderite Axe',
-        'tier': 'III',
-        'stats': {'atk_min': 175, 'atk_max': 194, 'magic': 140, 'crit_chance': 5},
-        'special_effects': {},
-        'level_req': 35
-    },
-    'aqua_crystal': {
-        'name': 'Aqua Crystal',
-        'tier': 'III',
-        'stats': {'magic': 110},
-        'special_effects': {},
-        'level_req': 30
-    },
-    'arcane_spellbook': {
-        'name': 'Arcane Spellbook',
-        'tier': 'III',
-        'stats': {'magic': 100},
-        'special_effects': {},
-        'level_req': 25
-    },
-    'corrupted_fang': {
-        'name': 'Corrupted Fang',
-        'tier': 'III',
-        'stats': {'magic': 130, 'atk_min': 35, 'atk_max': 35},
-        'special_effects': {},
-        'level_req': 30
-    },
-    'daybreak': {
-        'name': 'Daybreak',
-        'tier': 'III',
-        'stats': {'atk_min': 100, 'atk_max': 111},
-        'special_effects': {'burn_chance': 0.52},
-        'set': 'flame',
-        'level_req': 70
-    },
-    'enchanted_blade': {
-        'name': 'Enchanted Blade',
-        'tier': 'III',
-        'stats': {'atk_min': 125, 'atk_max': 125, 'magic': 100},
-        'special_effects': {},
-        'level_req': 25
-    },
-    'magicians_hat': {
-        'name': 'Magician\'s Hat',
-        'tier': 'III',
-        'stats': {'magic': 80, 'health': 30},
-        'special_effects': {},
-        'level_req': 25
-    },
-    'mana_lantern': {
-        'name': 'Mana Lantern',
-        'tier': 'III',
-        'stats': {'magic': 90},
-        'special_effects': {},
-        'level_req': 25
-    },
-    
-    # Tier IV
-    'atlantis_armor': {
-        'name': 'Atlantis Armor',
-        'tier': 'IV',
-        'stats': {'health': 75, 'shield': 10},
-        'special_effects': {},
-        'level_req': 50
-    },
-    'bee_breastplate': {
-        'name': 'Bee Breastplate',
-        'tier': 'IV',
-        'stats': {'health': 460, 'shield': 40},
-        'special_effects': {},
-        'set': 'queen_bee',
-        'level_req': 65
-    },
-    'black_wolf_necklace': {
-        'name': 'Black Wolf Necklace',
-        'tier': 'IV',
-        'stats': {'atk_min': 225, 'atk_max': 249, 'crit_chance': 15, 'crit_damage': 22},
-        'special_effects': {},
-        'set': 'wolf_howl',
-        'level_req': 65
-    },
-    'blood_butcher': {
-        'name': 'Blood Butcher',
-        'tier': 'IV',
-        'stats': {'atk_min': 250, 'atk_max': 277, 'crit_chance': 16},
-        'special_effects': {'blood_butcher': True},
-        'set': 'crimson',
-        'level_req': 50
-    },
-    'crimson_slime_fang': {
-        'name': 'Crimson Slime Fang',
-        'tier': 'IV',
-        'stats': {'magic': 220, 'crit_damage': 27},
-        'special_effects': {},
-        'set': 'crimson',
-        'level_req': 65
-    },
-    'cursed_spellbook': {
-        'name': 'Cursed Spellbook',
-        'tier': 'IV',
-        'stats': {'magic': 400},
-        'special_effects': {'damage_multiplier': 1.3},
-        'set': 'crimson',
-        'level_req': 100
-    },
-    'evernight': {
-        'name': 'Evernight',
-        'tier': 'IV',
-        'stats': {'atk_min': 450, 'atk_max': 450},
-        'special_effects': {'burn_chance': 0.40},
-        'set': 'flame',
-        'level_req': 100
-    },
-    'forest_crown': {
-        'name': 'Forest Crown',
-        'tier': 'IV',
-        'stats': {'health': 775, 'shield': 275},
-        'special_effects': {},
-        'level_req': 65
-    },
-    'ghost_lantern': {
-        'name': 'Ghost Lantern',
-        'tier': 'IV',
-        'stats': {'magic': 480},
-        'special_effects': {},
-        'level_req': 65
-    },
-    'slime_crown': {
-        'name': 'Slime Crown',
-        'tier': 'IV',
-        'stats': {'health': 200, 'shield': 50},
-        'special_effects': {},
-        'level_req': 35
-    },
-    'volcanic_axe': {
-        'name': 'Volcanic Axe',
-        'tier': 'IV',
-        'stats': {'atk_min': 280, 'atk_max': 280},
-        'special_effects': {'burn_chance': 0.05},
-        'set': 'wolf_howl',
-        'level_req': 65
-    },
-    'winter_spirit': {
-        'name': 'Winter Spirit',
-        'tier': 'IV',
-        'stats': {'atk_min': 200, 'atk_max': 200, 'health': 50},
-        'special_effects': {'freeze_chance': 0.02},
-        'level_req': 65
-    },
-    
-    # Tier V
-    'queenbee_crown': {
-        'name': 'Queen Bee\'s Crown',
-        'tier': 'V',
-        'stats': {'atk_min': 800, 'atk_max': 888, 'crit_chance': 20, 'crit_damage': 80},
-        'special_effects': {'bleed_chance': 0.26},
-        'set': 'queen_bee',
-        'level_req': 150
-    },
-    'volatile_gem': {
-        'name': 'Volatile Gem',
-        'tier': 'V',
-        'stats': {'magic': 315},
-        'special_effects': {
-            'burn_chance': 0.11,
-            'poison_chance': 0.11,
-            'dot_bonus': 0.20
-        },
-        'set': 'flame',
-        'level_req': 150
-    },
-    
-    # Mana-Focused Passives
-    'mana_crystal': {
-        'name': 'Mana Crystal',
-        'tier': 'II',
-        'stats': {'magic': 25},
-        'special_effects': {},
-        'level_req': 5
-    },
-    'aqua_lapis': {
-        'name': 'Aqua Lapis',
-        'tier': 'III',
-        'stats': {'magic': 70},
-        'special_effects': {},
-        'level_req': 30
-    }
-}
 
 def is_mobile_device(user_agent):
     """Detect if the request is from a mobile device"""
@@ -1005,7 +633,7 @@ def optimize_damage():
                 results.append({
                     'equipment': list(combo),
                     'final_damage': result['final_damage'],
-                    'three_hit_total': result['three_hit_damage']['total_damage'],
+                    'ten_second_total': result['ten_second_damage']['total_damage'],
                     'crit_rate': result['crit_rate'],
                     'crit_damage': result['crit_damage']
                 })
@@ -1024,7 +652,7 @@ def optimize_damage():
                 'equipment_ids': combo['equipment'],
                 'equipment_names': equipment_names,
                 'final_damage': round(combo['final_damage'], 2),
-                'three_hit_total': round(combo['three_hit_total'], 2),
+                'ten_second_total': round(combo['ten_second_total'], 2),
                 'crit_rate': round(combo['crit_rate'], 1),
                 'crit_damage': round(combo['crit_damage'], 1)
             })
@@ -1071,7 +699,7 @@ def optimize_damage_advanced():
                 'critDamage': data.get('critDamage', 100)
             })
         
-        optimization_type = data.get('optimizationType', 'final_damage')  # final_damage, three_hit, first_hit, dot
+        optimization_type = data.get('optimizationType', 'final_damage')  # final_damage, ten_second, first_hit, dot
         
         # Get all equipment IDs that meet level requirement
         player_level = base_config['playerLevel']
@@ -1099,10 +727,10 @@ def optimize_damage_advanced():
                 # Determine score based on optimization type
                 if optimization_type == 'final_damage':
                     score = result['final_damage']
-                elif optimization_type == 'three_hit':
-                    score = result['three_hit_damage']['total_damage']
+                elif optimization_type == 'ten_second':
+                    score = result['ten_second_damage']['total_damage']
                 elif optimization_type == 'first_hit':
-                    score = result['three_hit_damage']['hit_1']
+                    score = result['ten_second_damage']['hit_1']
                 elif optimization_type == 'dot':
                     score = result['dot_damage']
                 else:
@@ -1111,8 +739,8 @@ def optimize_damage_advanced():
                 results.append({
                     'equipment': list(combo),
                     'final_damage': result['final_damage'],
-                    'three_hit_total': result['three_hit_damage']['total_damage'],
-                    'first_hit': result['three_hit_damage']['hit_1'],
+                    'ten_second_total': result['ten_second_damage']['total_damage'],
+                    'first_hit': result['ten_second_damage']['hit_1'],
                     'dot_damage': result['dot_damage'],
                     'crit_rate': result['crit_rate'],
                     'crit_damage': result['crit_damage'],
@@ -1133,7 +761,7 @@ def optimize_damage_advanced():
                 'equipment_ids': combo['equipment'],
                 'equipment_names': equipment_names,
                 'final_damage': round(combo['final_damage'], 2),
-                'three_hit_total': round(combo['three_hit_total'], 2),
+                'ten_second_total': round(combo['ten_second_total'], 2),
                 'first_hit': round(combo['first_hit'], 2),
                 'dot_damage': round(combo['dot_damage'], 2),
                 'crit_rate': round(combo['crit_rate'], 1),
