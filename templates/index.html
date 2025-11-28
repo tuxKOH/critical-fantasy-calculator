@@ -7,7 +7,7 @@ Copyright (C) 2024  @tux_koh
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>-- OUTDATED --</title>
+    <title>Fantasy Damage Calculator</title>
     <style>
         * {
             margin: 0;
@@ -926,8 +926,8 @@ Copyright (C) 2024  @tux_koh
                                 <span class="result-value" id="resultDot">0</span>
                             </div>
                             <div class="result-item">
-                                <span class="result-label">3-Hit Total:</span>
-                                <span class="result-value" id="resultThreeHit">0</span>
+                                <span class="result-label">10s Total Damage:</span>
+                                <span class="result-value" id="resultTenSecond">0</span>
                             </div>
                         </div>
                         <div>
@@ -969,7 +969,7 @@ Copyright (C) 2024  @tux_koh
                     <h3>Top Damage Combinations</h3>
                     <div class="optimization-filters">
                         <button class="filter-btn active" onclick="setOptimizationType('final_damage')">Final Damage Top 10</button>
-                        <button class="filter-btn" onclick="setOptimizationType('three_hit')">3-Hit Total Top 10</button>
+                        <button class="filter-btn" onclick="setOptimizationType('ten_second')">10s Total Damage Top 10</button>
                         <button class="filter-btn" onclick="setOptimizationType('first_hit')">First Hit Top 10</button>
                         <button class="filter-btn" onclick="setOptimizationType('dot')">DoT Damage Top 10</button>
                     </div>
@@ -1373,10 +1373,10 @@ Copyright (C) 2024  @tux_koh
                     document.getElementById('resultCritDamage').textContent = result.crit_damage.toLocaleString() + '%';
                     document.getElementById('resultDamageType').textContent = result.damage_type === 'magic' ? 'Magic' : 'Physical';
                     
-                    // Update three hit damage display
-                    if (result.three_hit_damage) {
-                        document.getElementById('resultThreeHit').textContent = result.three_hit_damage.total_damage.toLocaleString();
-                        document.getElementById('resultMechanic').textContent = result.three_hit_damage.mechanic;
+                    // Update ten second damage display
+                    if (result.ten_second_damage) {
+                        document.getElementById('resultTenSecond').textContent = result.ten_second_damage.total_damage.toLocaleString();
+                        document.getElementById('resultMechanic').textContent = result.ten_second_damage.mechanic;
                     }
                     
                     // Show player stats if using point system
@@ -1495,7 +1495,7 @@ Copyright (C) 2024  @tux_koh
             
             const scoreLabel = {
                 'final_damage': 'Final Damage',
-                'three_hit': '3-Hit Total', 
+                'ten_second': '10s Total Damage', 
                 'first_hit': 'First Hit',
                 'dot': 'DoT Damage'
             }[result.optimization_type] || 'Score';
@@ -1505,7 +1505,7 @@ Copyright (C) 2024  @tux_koh
                     <div class="optimize-combo">
                         <h4>#${index + 1} - ${scoreLabel}: ${combo.score.toLocaleString()}</h4>
                         <p><strong>Final Damage:</strong> ${combo.final_damage.toLocaleString()}</p>
-                        <p><strong>3-Hit Total:</strong> ${combo.three_hit_total.toLocaleString()}</p>
+                        <p><strong>10s Total Damage:</strong> ${combo.ten_second_total.toLocaleString()}</p>
                         <p><strong>First Hit:</strong> ${combo.first_hit.toLocaleString()}</p>
                         <p><strong>DoT Damage:</strong> ${combo.dot_damage.toLocaleString()}</p>
                         <p><strong>Equipment:</strong> ${combo.equipment_names.join(', ')}</p>
@@ -1557,7 +1557,7 @@ Copyright (C) 2024  @tux_koh
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                },
+                    },
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
