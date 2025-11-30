@@ -19,7 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from flask import Flask, render_template, request, jsonify
 import math
 from itertools import combinations
-from data import EQUIPMENT_DB , WEAPON_DB
+from data import EQUIPMENT_DB, WEAPON_DB
+
 app = Flask(__name__)
 
 class DamageCalculator:
@@ -122,7 +123,6 @@ class DamageCalculator:
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
                 'hit_4': base_damage_per_hit + dot_damage_per_hit,
-                'bonus_damage': base_damage_per_hit * 3,  # 7x total = 4 hits + 3x bonus
                 'total_damage': total_damage,
                 'mechanic': 'Flow: 7x total damage in 10 seconds (4 hits)'
             }
@@ -138,15 +138,14 @@ class DamageCalculator:
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
                 'hit_4': base_damage_per_hit + dot_damage_per_hit,
-                'bonus_damage': base_damage_per_hit * 3,  # 7x total = 4 hits + 3x bonus
                 'total_damage': total_damage,
                 'mechanic': 'Brust: 7x total damage in 10 seconds (4 hits)'
             }
         
         elif weapon_type in ['sword', 'blade']:  # Chain (Blade)
-            # 5 hits in 10 seconds: 8.5x total multiplier + DoT
-            total_base_damage = base_damage_per_hit * 8.5
-            total_dot_damage = dot_damage_per_hit * 5
+            # 4 hits in 10 seconds: 10x total multiplier + DoT
+            total_base_damage = base_damage_per_hit * 10
+            total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
             
             return {
@@ -154,10 +153,8 @@ class DamageCalculator:
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
                 'hit_4': base_damage_per_hit + dot_damage_per_hit,
-                'hit_5': base_damage_per_hit + dot_damage_per_hit,
-                'bonus_damage': base_damage_per_hit * 3.5,  # 8.5x total = 5 hits + 3.5x bonus
                 'total_damage': total_damage,
-                'mechanic': 'Chain: 8.5x total damage in 10 seconds (5 hits)'
+                'mechanic': 'Chain: 10x total damage in 10 seconds (4 hits)'
             }
         
         elif weapon_type == 'scythe':  # Reverberation (Scythe)
@@ -171,9 +168,24 @@ class DamageCalculator:
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
                 'hit_4': base_damage_per_hit + dot_damage_per_hit,
-                'bonus_damage': base_damage_per_hit * 0.8,  # 4.8x total = 4 hits + 0.8x bonus
                 'total_damage': total_damage,
                 'mechanic': 'Reverberation: 4.8x total damage in 10 seconds (4 hits)'
+            }
+        
+        elif weapon_type == 'furioso':  # Furioso
+            # 5.42 hits in 10 seconds: 5.42x total multiplier + DoT
+            total_base_damage = base_damage_per_hit * 5.42
+            total_dot_damage = dot_damage_per_hit * 5.42
+            total_damage = total_base_damage + total_dot_damage
+            
+            return {
+                'hit_1': base_damage_per_hit + dot_damage_per_hit,
+                'hit_2': base_damage_per_hit + dot_damage_per_hit,
+                'hit_3': base_damage_per_hit + dot_damage_per_hit,
+                'hit_4': base_damage_per_hit + dot_damage_per_hit,
+                'hit_5': base_damage_per_hit + dot_damage_per_hit,
+                'total_damage': total_damage,
+                'mechanic': 'Furioso: 5.42x total damage in 10 seconds (5.42 hits)'
             }
         
         else:  # Default (no special mechanic)
@@ -187,7 +199,6 @@ class DamageCalculator:
                 'hit_2': base_damage_per_hit + dot_damage_per_hit,
                 'hit_3': base_damage_per_hit + dot_damage_per_hit,
                 'hit_4': base_damage_per_hit + dot_damage_per_hit,
-                'bonus_damage': 0,
                 'total_damage': total_damage,
                 'mechanic': 'Default: 4x damage in 10 seconds (4 hits)'
             }
@@ -524,7 +535,6 @@ class DamageCalculator:
                     'hit_3': round(ten_second_data['hit_3'], 2),
                     'hit_4': round(ten_second_data.get('hit_4', 0), 2),
                     'hit_5': round(ten_second_data.get('hit_5', 0), 2),
-                    'bonus_damage': round(ten_second_data['bonus_damage'], 2),
                     'total_damage': round(ten_second_data['total_damage'], 2),
                     'mechanic': ten_second_data['mechanic']
                 },
@@ -550,10 +560,6 @@ class DamageCalculator:
             
         except Exception as e:
             return {'success': False, 'error': str(e)}
-
-
-
-# Equipment Database with level requirements
 
 def is_mobile_device(user_agent):
     """Detect if the request is from a mobile device"""

@@ -1,5 +1,11 @@
 # Weapon Database with level requirements
 WEAPON_DB = {
+    'furioso': {
+        'name': 'Furioso',
+        'type': 'furioso',
+        'stats': {'atk_min': 750, 'atk_max': 750},
+        'level_req': 50
+    },
     'wooden_sword': {
         'name': 'Wooden Sword',
         'type': 'sword',
