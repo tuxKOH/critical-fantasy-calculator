@@ -3,8 +3,8 @@ WEAPON_DB = {
     'furioso': {
         'name': 'Furioso',
         'type': 'furioso',
-        'stats': {'atk_min': 350, 'atk_max': 350},
-        'level_req': 50
+        'stats': {'atk_min': 475, 'atk_max': 475},
+        'level_req': 80
     },
     'wooden_sword': {
         'name': 'Wooden Sword',
