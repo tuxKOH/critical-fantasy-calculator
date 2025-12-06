@@ -74,6 +74,12 @@ WEAPON_DB = {
         'stats': {'atk_min': 325, 'atk_max': 360},
         'set': 'queen_bee',
         'level_req': 65
+    },
+    'dawnbreak': {
+    'name': 'Dawnbreak',
+    'type': 'sword',
+    'stats': {'atk_min': 1599, 'atk_max': 1599},
+    'level_req': 190
     }
 }
 
@@ -177,7 +183,7 @@ EQUIPMENT_DB = {
         'name': 'Dual Sword',
         'tier': 'IV',
         'stats': {'atk_min': 135, 'atk_max': 149},
-        'special_effects': {'double_damage_chance': 0.15},
+        'special_effects': {'double_damage_chance': 0.10},
         'level_req': 100
     },
     'forest_dweller_axe': {
