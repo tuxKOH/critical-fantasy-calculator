@@ -27,7 +27,7 @@ class DamageCalculator:
     # Stat point multipliers
     STR_DMG_MIN = 2.96
     STR_DMG_MAX = 6.45
-    INT_MAGIC = 6.0
+    INT_MAGIC = 8.0
     VIT_HP = 35
     DEF_SHIELD = 17
     DEX_CRIT = 0.8
