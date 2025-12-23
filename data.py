@@ -102,7 +102,7 @@ EQUIPMENT_DB = {
     'hunting_dagger': {
         'name': 'Hunting Dagger',
         'tier': 'I',
-        'stats': {'atk_min': 5, 'atk_max': 5},
+        'stats': {'atk_min': 12, 'atk_max': 12},
         'special_effects': {},
         'set': 'explorer',
         'level_req': 1
