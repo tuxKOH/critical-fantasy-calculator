@@ -981,7 +981,7 @@ Copyright (C) 2024  @tux_koh
                 </div>
                 
                 <div class="note">
-                    <strong>Note:</strong> DoT damage calculated separately. Flame Set bonus (+10% burn chance) with 2+ items. Damage type determined by weapon (Staff = Magic, Others = Physical).
+                    <strong>Note:</strong> DoT damage calculated separately. Flame Set bonus (+10% burn chance) with 2+ items. Damage type determined by weapon (Staff = Magic, Others = Physical). <strong>Furioso updated to 3.7x + bleed.</strong>
                 </div>
             </div>
         </div>
@@ -1270,8 +1270,14 @@ Copyright (C) 2024  @tux_koh
                     levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
                 }
                 
+                // Furioso special info
+                let furiosoInfo = '';
+                if (selectedWeapon === 'furioso') {
+                    furiosoInfo = `<br><small style="color: #4a90e2;">Updated: 3.7x total damage + bleed on 4th hit</small>`;
+                }
+                
                 weaponInfo.innerHTML = `
-                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}<br>
+                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}${furiosoInfo}<br>
                     ${stats.join(', ')}
                 `;
             } else {
