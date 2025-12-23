@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize points
         updatePoints();
         
+        // Update weapon info
+        updateWeaponInfo();
+        
         // Initial calculation
         calculateDamage();
     }
@@ -95,28 +98,28 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Build effects string
         const effects = [];
-        if (data.special_effects.damage_multiplier) {
+        if (data.special_effects && data.special_effects.damage_multiplier) {
             effects.push(`${data.special_effects.damage_multiplier}x Damage`);
         }
-        if (data.special_effects.double_damage_chance) {
+        if (data.special_effects && data.special_effects.double_damage_chance) {
             effects.push(`${data.special_effects.double_damage_chance * 100}% 2x Damage`);
         }
-        if (data.special_effects.burn_chance) {
+        if (data.special_effects && data.special_effects.burn_chance) {
             effects.push(`+${data.special_effects.burn_chance * 100}% Burn`);
         }
-        if (data.special_effects.bleed_chance) {
+        if (data.special_effects && data.special_effects.bleed_chance) {
             effects.push(`+${data.special_effects.bleed_chance * 100}% Bleed`);
         }
-        if (data.special_effects.poison_chance) {
+        if (data.special_effects && data.special_effects.poison_chance) {
             effects.push(`+${data.special_effects.poison_chance * 100}% Poison`);
         }
-        if (data.special_effects.blood_butcher) {
+        if (data.special_effects && data.special_effects.blood_butcher) {
             effects.push('Blood Butcher Debuff');
         }
-        if (data.special_effects.freeze_chance) {
+        if (data.special_effects && data.special_effects.freeze_chance) {
             effects.push(`+${data.special_effects.freeze_chance * 100}% Freeze`);
         }
-        if (data.special_effects.dot_bonus) {
+        if (data.special_effects && data.special_effects.dot_bonus) {
             effects.push('+20% Magic to DoT');
         }
         
@@ -143,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Only allow selection if level requirement is met
         if (meetsLevelReq) {
-            div.addEventListener('click', () => toggleEquipmentSelection(id, data));
+            div.addEventListener('click', () => toggleEquipmentSelection(id));
         } else {
             div.style.cursor = 'not-allowed';
             div.title = `Requires Level ${levelReq}`;
@@ -198,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Toggle equipment selection
-    function toggleEquipmentSelection(id, data) {
+    function toggleEquipmentSelection(id) {
         if (selectedEquipment.includes(id)) {
             // Deselect
             selectedEquipment = selectedEquipment.filter(eq => eq !== id);
@@ -223,13 +226,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         selectedEquipment.forEach(id => {
             const data = equipmentDatabase[id];
-            const div = document.createElement('div');
-            div.className = 'selected-item';
-            div.innerHTML = `
-                ${data.name}
-                <button class="remove-item" onclick="app.removeEquipment('${id}')">×</button>
-            `;
-            container.appendChild(div);
+            if (data) {
+                const div = document.createElement('div');
+                div.className = 'selected-item';
+                div.innerHTML = `
+                    ${data.name}
+                    <button class="remove-item" data-id="${id}">×</button>
+                `;
+                container.appendChild(div);
+            }
+        });
+        
+        // Add event listeners to remove buttons
+        container.querySelectorAll('.remove-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                removeEquipment(id);
+            });
         });
     }
     
@@ -323,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('maxPoints').textContent = maxPoints;
         
         // Update title display
-        document.querySelector('#pointsSection h3').innerHTML = `Attribute Points (Level ${playerLevel}) <button class="small-btn" onclick="app.optimizeStats()">Optimize Stats</button>`;
+        document.querySelector('#pointsSection h3').innerHTML = `Attribute Points (Level ${playerLevel}) <button class="small-btn" id="optimizeStatsBtn">Optimize Stats</button>`;
         
         calculateDamage();
     }
@@ -404,8 +417,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.calculated_stats && result.player_stats) {
                     document.getElementById('playerStatsSection').style.display = 'block';
                     
-                    const damageTypeDisplay = result.damage_type === 'magic' ? 'Magic' : 'Physical';
-                    
                     document.getElementById('playerStatsContent').innerHTML = `
                         <div class="result-item">
                             <span class="result-label">Health:</span>
@@ -441,6 +452,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 document.getElementById('resultSection').style.display = 'block';
+            } else {
+                console.error('Calculation failed:', result.error);
             }
         })
         .catch(error => {
@@ -531,13 +544,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p><strong>DoT Damage:</strong> ${combo.dot_damage.toLocaleString()}</p>
                     <p><strong>Equipment:</strong> ${combo.equipment_names.join(', ')}</p>
                     <p><strong>Crit:</strong> ${combo.crit_rate}% rate, ${combo.crit_damage}% damage</p>
-                    <button onclick="app.applyOptimizedCombo(${JSON.stringify(combo.equipment_ids).replace(/"/g, '&quot;')})">Apply This Combo</button>
+                    <button class="apply-combo-btn" data-ids='${JSON.stringify(combo.equipment_ids)}'>Apply This Combo</button>
                 </div>
             `;
         });
         
         content.innerHTML = html;
         section.style.display = 'block';
+        
+        // Add event listeners to apply buttons
+        content.querySelectorAll('.apply-combo-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const equipmentIds = JSON.parse(this.getAttribute('data-ids'));
+                applyOptimizedCombo(equipmentIds);
+            });
+        });
     }
 
     // Apply optimized combination
@@ -578,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                },
+            },
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -676,18 +697,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h4>Set Bonuses Applied</h4>
         `;
         
-        Object.entries(currentResult.set_bonuses_applied).forEach(([set, applied]) => {
-            if (applied) {
-                html += `<div class="detail-item">
-                    <span>${set.replace('_', ' ').toUpperCase()}:</span>
-                    <span>✓ Active</span>
-                </div>`;
-            }
-        });
+        if (currentResult.set_bonuses_applied) {
+            Object.entries(currentResult.set_bonuses_applied).forEach(([set, applied]) => {
+                if (applied) {
+                    html += `<div class="detail-item">
+                        <span>${set.replace('_', ' ').toUpperCase()}:</span>
+                        <span>✓ Active</span>
+                    </div>`;
+                }
+            });
+        }
         
         html += `</div>`;
         
-        if (currentResult.dot_damage > 0) {
+        if (currentResult.dot_damage > 0 && details.dot_calculation) {
             html += `
                 <div class="detail-section">
                     <h4>DoT Calculations</h4>
@@ -731,33 +754,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Setup event listeners
     function setupEventListeners() {
-        // Auto-calculate when inputs change
-        document.getElementById('minDamage')?.addEventListener('input', calculateDamage);
-        document.getElementById('maxDamage')?.addEventListener('input', calculateDamage);
-        document.getElementById('magicDamage')?.addEventListener('input', calculateDamage);
-        document.getElementById('critRate')?.addEventListener('input', calculateDamage);
-        document.getElementById('critDamage')?.addEventListener('input', calculateDamage);
+        // Calculate button
+        document.querySelector('.calculate-btn').addEventListener('click', calculateDamage);
         
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('extraDataModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
+        // Optimize button
+        document.getElementById('optimizeBtn').addEventListener('click', optimizeDamageAdvanced);
+        
+        // Extra data button
+        document.querySelector('.extra-data-btn').addEventListener('click', showExtraData);
+        
+        // Close modal button
+        document.querySelector('.close-modal').addEventListener('click', closeExtraData);
+        
+        // System toggle buttons
+        document.getElementById('togglePoints').addEventListener('click', () => toggleInputSystem('points'));
+        document.getElementById('toggleManual').addEventListener('click', () => toggleInputSystem('manual'));
         
         // Equipment search
-        document.getElementById('equipmentSearch')?.addEventListener('input', filterEquipment);
+        document.getElementById('equipmentSearch').addEventListener('input', filterEquipment);
+        
+        // Tier filters
+        document.querySelectorAll('.tier-filter').forEach((btn, index) => {
+            btn.addEventListener('click', function() {
+                const tiers = ['all', 'I', 'II', 'III', 'IV', 'V'];
+                filterByTier(tiers[index]);
+            });
+        });
         
         // Weapon select
-        document.getElementById('weaponSelect')?.addEventListener('change', updateWeaponInfo);
-        
-        // System toggle
-        document.getElementById('togglePoints')?.addEventListener('click', () => toggleInputSystem('points'));
-        document.getElementById('toggleManual')?.addEventListener('click', () => toggleInputSystem('manual'));
+        document.getElementById('weaponSelect').addEventListener('change', updateWeaponInfo);
         
         // Player level change
-        document.getElementById('playerLevel')?.addEventListener('change', updateEquipmentDisplay);
+        document.getElementById('playerLevel').addEventListener('change', updateEquipmentDisplay);
         
         // Attribute points changes
         ['strength', 'vitality', 'intelligence', 'dexterity', 'defense'].forEach(id => {
@@ -776,25 +804,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 element.addEventListener('input', calculateDamage);
             }
         });
+        
+        // Optimization filters (delegated event listener)
+        document.querySelector('.optimization-filters').addEventListener('click', function(e) {
+            if (e.target.classList.contains('filter-btn')) {
+                const type = e.target.textContent.includes('Final') ? 'final_damage' :
+                            e.target.textContent.includes('10s') ? 'ten_second' :
+                            e.target.textContent.includes('First') ? 'first_hit' : 'dot';
+                
+                setOptimizationType(type);
+                
+                // Update active class
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                e.target.classList.add('active');
+            }
+        });
+        
+        // Optimize stats button (delegated since it's dynamically created)
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'optimizeStatsBtn') {
+                optimizeStats();
+            }
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('extraDataModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
     }
-    
-    // Expose functions to global scope
-    window.app = {
-        removeEquipment,
-        optimizeStats,
-        applyOptimizedCombo,
-        setOptimizationType,
-        optimizeDamageAdvanced,
-        showExtraData,
-        closeExtraData,
-        filterByTier,
-        filterEquipment,
-        toggleInputSystem,
-        updateWeaponInfo,
-        updateEquipmentDisplay,
-        updatePoints,
-        calculateDamage
-    };
     
     // Initialize the application
     initialize();
