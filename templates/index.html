@@ -8,732 +8,13 @@ Copyright (C) 2024  @tux_koh
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fantasy Damage Calculator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-        
-        /* Common Styles for Both Versions */
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: white;
-            text-align: center;
-        }
-        
-        .calculator {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .panel-section {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-        }
-        
-        .panel-section h3 {
-            color: #2c3e50;
-            margin-bottom: 12px;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        select, input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        
-        .calculate-btn, .extra-data-btn, .optimize-btn {
-            width: 100%;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-        
-        .calculate-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-        }
-        
-        .extra-data-btn {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            margin-top: 10px;
-        }
-        
-        .optimize-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-        }
-        
-        .small-btn {
-            padding: 5px 10px;
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.8em;
-            margin-left: 10px;
-        }
-        
-        .result {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-        }
-        
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding: 6px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .result-label {
-            font-weight: bold;
-            color: #666;
-        }
-        
-        .result-value {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .footer {
-            text-align: center;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-            color: #666;
-        }
-        
-        /* Extra Data Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            border-radius: 10px;
-            max-width: 90%;
-            max-height: 80%;
-            overflow-y: auto;
-            position: relative;
-        }
-        
-        .close-modal {
-            position: absolute;
-            right: 15px;
-            top: 10px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #666;
-        }
-        
-        .modal-header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: white;
-            padding: 20px;
-            border-radius: 10px 10px 0 0;
-        }
-        
-        .modal-body {
-            padding: 20px;
-        }
-        
-        .detail-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .detail-section h4 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        
-        .detail-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            padding: 3px 0;
-        }
-        
-        /* Set indicators */
-        .flame-set-indicator, .wolf-set-indicator, .crimson-set-indicator,
-        .queen-bee-set-indicator, .explorer-set-indicator, .forest-set-indicator,
-        .library-set-indicator, .blessing-set-indicator {
-            padding: 1px 4px;
-            border-radius: 8px;
-            margin-left: 3px;
-        }
-        
-        .flame-set-indicator { background: #ff6b6b; color: white; }
-        .wolf-set-indicator { background: #8e44ad; color: white; }
-        .crimson-set-indicator { background: #dc3545; color: white; }
-        .queen-bee-set-indicator { background: #ffc107; color: black; }
-        .explorer-set-indicator { background: #28a745; color: white; }
-        .forest-set-indicator { background: #20c997; color: white; }
-        .library-set-indicator { background: #6f42c1; color: white; }
-        .blessing-set-indicator { background: #17a2b8; color: white; }
-
-        /* Optimization Results */
-        .optimize-result {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-        }
-        
-        .optimize-combo {
-            background: white;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: 1px solid #ffeaa7;
-        }
-        
-        .optimize-combo h4 {
-            color: #2c3e50;
-            margin-bottom: 8px;
-        }
-        
-        .optimize-combo button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-
-        .optimization-filters {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            padding: 8px 12px;
-            background: #e9ecef;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .filter-btn.active {
-            background: #667eea;
-            color: white;
-        }
-
-        /* Desktop Styles */
-        @media (min-width: 768px) {
-            body {
-                padding: 20px;
-            }
-            
-            .container {
-                max-width: 1200px;
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 30px;
-            }
-            
-            .header h1 {
-                font-size: 2.5em;
-                margin-bottom: 10px;
-            }
-            
-            .header p {
-                font-size: 1.1em;
-            }
-            
-            .calculator {
-                padding: 30px;
-                grid-template-columns: 1fr 1fr;
-                display: grid;
-                gap: 30px;
-            }
-            
-            .left-panel, .right-panel {
-                display: flex;
-                flex-direction: column;
-                gap: 25px;
-            }
-            
-            .panel-section {
-                border-radius: 10px;
-                padding: 20px;
-            }
-            
-            label {
-                font-size: 1em;
-                margin-bottom: 8px;
-            }
-            
-            select, input {
-                padding: 12px;
-                font-size: 16px;
-            }
-            
-            .system-toggle {
-                gap: 20px;
-                margin-bottom: 20px;
-            }
-            
-            .toggle-option {
-                padding: 10px;
-                font-size: 1em;
-            }
-            
-            .attribute-points {
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }
-            
-            .point-input {
-                flex-direction: row;
-                align-items: center;
-                gap: 10px;
-            }
-            
-            .point-input label {
-                flex: 1;
-                margin-bottom: 0;
-            }
-            
-            .point-input input {
-                width: 80px;
-            }
-            
-            .equipment-list {
-                max-height: 400px;
-            }
-            
-            .equipment-item {
-                padding: 15px;
-            }
-            
-            .equipment-name {
-                font-size: 1em;
-            }
-            
-            .equipment-stats {
-                font-size: 0.9em;
-            }
-            
-            .equipment-effects {
-                font-size: 0.85em;
-            }
-            
-            .potion-item {
-                padding: 10px;
-            }
-            
-            .potion-name {
-                font-size: 1em;
-            }
-            
-            .potion-desc {
-                font-size: 0.85em;
-            }
-            
-            .result {
-                padding: 25px;
-                border-radius: 10px;
-            }
-            
-            .result h3 {
-                font-size: 1.2em;
-                margin-bottom: 15px;
-            }
-            
-            .result-grid {
-                grid-template-columns: 1fr 1fr;
-                display: grid;
-                gap: 15px;
-            }
-            
-            .result-item {
-                font-size: 1em;
-            }
-            
-            .footer {
-                padding: 20px;
-                font-size: 1em;
-            }
-            
-            .set-indicators {
-                font-size: 0.7em;
-            }
-            
-            .modal-content {
-                max-width: 800px;
-            }
-        }
-
-        /* Mobile Styles */
-        @media (max-width: 767px) {
-            body {
-                padding: 10px;
-                font-size: 14px;
-            }
-            
-            .container {
-                border-radius: 10px;
-            }
-            
-            .header {
-                padding: 20px 15px;
-            }
-            
-            .header h1 {
-                font-size: 1.5em;
-                margin-bottom: 8px;
-            }
-            
-            .header p {
-                font-size: 0.9em;
-            }
-            
-            .calculator {
-                padding: 15px;
-                gap: 20px;
-            }
-            
-            .panel-section {
-                border-radius: 8px;
-                padding: 15px;
-            }
-            
-            .panel-section h3 {
-                font-size: 1.1em;
-            }
-            
-            label {
-                font-size: 0.9em;
-            }
-            
-            select, input {
-                padding: 10px;
-                font-size: 14px;
-            }
-            
-            .system-toggle {
-                gap: 10px;
-                margin-bottom: 15px;
-            }
-            
-            .toggle-option {
-                padding: 8px;
-                font-size: 0.85em;
-            }
-            
-            .attribute-points {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-            
-            .point-input {
-                flex-direction: column;
-                gap: 5px;
-            }
-            
-            .point-input input {
-                width: 100%;
-            }
-            
-            .points-info {
-                font-size: 0.85em;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-            
-            .weapon-info {
-                font-size: 0.85em;
-            }
-            
-            .equipment-list {
-                max-height: 300px;
-            }
-            
-            .equipment-item {
-                padding: 12px;
-            }
-            
-            .equipment-name {
-                font-size: 0.9em;
-            }
-            
-            .equipment-stats {
-                font-size: 0.8em;
-            }
-            
-            .equipment-effects {
-                font-size: 0.75em;
-            }
-            
-            .potion-item {
-                padding: 8px;
-            }
-            
-            .potion-name {
-                font-size: 0.9em;
-            }
-            
-            .potion-desc {
-                font-size: 0.8em;
-            }
-            
-            .result {
-                padding: 15px;
-                border-radius: 8px;
-            }
-            
-            .result h3 {
-                font-size: 1.1em;
-                margin-bottom: 12px;
-            }
-            
-            .result-grid {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-            
-            .result-item {
-                font-size: 0.9em;
-            }
-            
-            .footer {
-                padding: 15px;
-                font-size: 0.85em;
-            }
-            
-            .set-indicators {
-                font-size: 0.6em;
-            }
-            
-            .modal-content {
-                max-width: 95%;
-                margin: 10% auto;
-            }
-        }
-
-        /* Common Component Styles */
-        .system-toggle {
-            display: flex;
-        }
-        
-        .toggle-option {
-            flex: 1;
-            text-align: center;
-            background: #e9ecef;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .toggle-option.active {
-            background: #667eea;
-            color: white;
-        }
-        
-        .attribute-points {
-            display: grid;
-        }
-        
-        .points-info {
-            margin-top: 10px;
-        }
-        
-        .stats-grid {
-            display: grid;
-        }
-        
-        .weapon-info {
-            color: #666;
-            margin-top: 8px;
-            padding: 8px;
-            background: white;
-            border-radius: 5px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .equipment-search {
-            margin-bottom: 10px;
-        }
-        
-        .equipment-tiers {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .tier-filter {
-            padding: 6px 10px;
-            background: #e9ecef;
-            border: none;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .tier-filter.active {
-            background: #667eea;
-            color: white;
-        }
-        
-        .equipment-list {
-            overflow-y: auto;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-            background: white;
-        }
-        
-        .equipment-item {
-            border-bottom: 1px solid #e9ecef;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .equipment-item.selected {
-            background: #e3f2fd;
-            border-left: 4px solid #667eea;
-        }
-        
-        .equipment-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        
-        .equipment-tier {
-            background: #667eea;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-        }
-        
-        .selected-equipment {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        
-        .selected-item {
-            background: #667eea;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .remove-item {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-        }
-        
-        .potion-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-        
-        .potion-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: white;
-            border-radius: 6px;
-            border: 2px solid #e9ecef;
-        }
-        
-        .potion-item input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-        }
-        
-        .potion-info {
-            flex: 1;
-        }
-        
-        .player-stats {
-            background: #e8f5e8;
-            border-left-color: #4caf50;
-        }
-        
-        .note {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 5px;
-            padding: 12px;
-            margin-top: 15px;
-            color: #856404;
-        }
-        
-        .footer a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .result-highlight {
-            color: #667eea;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        // Make database available to JavaScript
+        window.equipmentDb = {{ equipment_db | tojson | safe }};
+        window.weaponDb = {{ weapon_db | tojson | safe }};
+        window.isMobile = {{ is_mobile | tojson | safe }};
+    </script>
 </head>
 <body>
     <div class="container">
@@ -748,10 +29,10 @@ Copyright (C) 2024  @tux_koh
                 <div class="panel-section">
                     <h3>Input System</h3>
                     <div class="system-toggle">
-                        <div class="toggle-option active" id="togglePoints" onclick="toggleInputSystem('points')">
+                        <div class="toggle-option active" id="togglePoints">
                             Attribute Points
                         </div>
-                        <div class="toggle-option" id="toggleManual" onclick="toggleInputSystem('manual')">
+                        <div class="toggle-option" id="toggleManual">
                             Manual Input
                         </div>
                     </div>
@@ -762,7 +43,7 @@ Copyright (C) 2024  @tux_koh
                     <h3>Player Level</h3>
                     <div class="form-group">
                         <label for="playerLevel">Current Level:</label>
-                        <input type="number" id="playerLevel" min="1" max="190" value="190" onchange="updateEquipmentDisplay(); calculateDamage();">
+                        <input type="number" id="playerLevel" min="1" max="190" value="190">
                     </div>
                 </div>
 
@@ -770,7 +51,7 @@ Copyright (C) 2024  @tux_koh
                 <div class="panel-section">
                     <h3>Weapon Selection</h3>
                     <div class="form-group">
-                        <select id="weaponSelect" onchange="updateWeaponInfo(); calculateDamage();">
+                        <select id="weaponSelect">
                             <option value="">No Weapon</option>
                             <option value="wooden_sword">Wooden Sword (Physical)</option>
                             <option value="wooden_staff">Wooden Staff (Magic)</option>
@@ -793,27 +74,27 @@ Copyright (C) 2024  @tux_koh
                 
                 <!-- Attribute Points Section -->
                 <div class="panel-section" id="pointsSection">
-                    <h3>Attribute Points (Level 190) <button class="small-btn" onclick="optimizeStats()">Optimize Stats</button></h3>
+                    <h3>Attribute Points (Level 190) <button class="small-btn">Optimize Stats</button></h3>
                     <div class="attribute-points">
                         <div class="point-input">
                             <label for="strength">Strength:</label>
-                            <input type="number" id="strength" min="0" max="380" value="0" onchange="updatePoints()">
+                            <input type="number" id="strength" min="0" max="380" value="0">
                         </div>
                         <div class="point-input">
                             <label for="vitality">Vitality:</label>
-                            <input type="number" id="vitality" min="0" max="380" value="0" onchange="updatePoints()">
+                            <input type="number" id="vitality" min="0" max="380" value="0">
                         </div>
                         <div class="point-input">
                             <label for="intelligence">Intelligence:</label>
-                            <input type="number" id="intelligence" min="0" max="380" value="0" onchange="updatePoints()">
+                            <input type="number" id="intelligence" min="0" max="380" value="0">
                         </div>
                         <div class="point-input">
                             <label for="dexterity">Dexterity:</label>
-                            <input type="number" id="dexterity" min="0" max="50" value="0" onchange="updatePoints()">
+                            <input type="number" id="dexterity" min="0" max="50" value="0">
                         </div>
                         <div class="point-input">
                             <label for="defense">Defense:</label>
-                            <input type="number" id="defense" min="0" max="380" value="0" onchange="updatePoints()">
+                            <input type="number" id="defense" min="0" max="380" value="0">
                         </div>
                     </div>
                     <div class="points-info">
@@ -829,23 +110,23 @@ Copyright (C) 2024  @tux_koh
                     <div class="stats-grid">
                         <div class="form-group">
                             <label for="minDamage">Min Attack Damage:</label>
-                            <input type="number" id="minDamage" placeholder="Min damage" min="0" step="1" onchange="calculateDamage()">
+                            <input type="number" id="minDamage" placeholder="Min damage" min="0" step="1">
                         </div>
                         <div class="form-group">
                             <label for="maxDamage">Max Attack Damage:</label>
-                            <input type="number" id="maxDamage" placeholder="Max damage" min="0" step="1" onchange="calculateDamage()">
+                            <input type="number" id="maxDamage" placeholder="Max damage" min="0" step="1">
                         </div>
                         <div class="form-group">
                             <label for="magicDamage">Magic Damage:</label>
-                            <input type="number" id="magicDamage" placeholder="Magic damage" min="0" step="1" onchange="calculateDamage()">
+                            <input type="number" id="magicDamage" placeholder="Magic damage" min="0" step="1">
                         </div>
                         <div class="form-group">
                             <label for="critRate">Crit Rate (%):</label>
-                            <input type="number" id="critRate" placeholder="Base 1%" min="0" max="100" step="0.1" value="1" onchange="calculateDamage()">
+                            <input type="number" id="critRate" placeholder="Base 1%" min="0" max="100" step="0.1" value="1">
                         </div>
                         <div class="form-group">
                             <label for="critDamage">Crit Damage (%):</label>
-                            <input type="number" id="critDamage" placeholder="Base 100%" min="100" step="1" value="100" onchange="calculateDamage()">
+                            <input type="number" id="critDamage" placeholder="Base 100%" min="100" step="1" value="100">
                         </div>
                     </div>
                 </div>
@@ -854,15 +135,15 @@ Copyright (C) 2024  @tux_koh
                 <div class="panel-section">
                     <h3>Equipment Selection (Max 3)</h3>
                     <div class="equipment-search">
-                        <input type="text" id="equipmentSearch" placeholder="Search equipment..." oninput="filterEquipment()">
+                        <input type="text" id="equipmentSearch" placeholder="Search equipment...">
                     </div>
                     <div class="equipment-tiers">
-                        <button class="tier-filter active" onclick="filterByTier('all')">All</button>
-                        <button class="tier-filter" onclick="filterByTier('I')">Tier I</button>
-                        <button class="tier-filter" onclick="filterByTier('II')">Tier II</button>
-                        <button class="tier-filter" onclick="filterByTier('III')">Tier III</button>
-                        <button class="tier-filter" onclick="filterByTier('IV')">Tier IV</button>
-                        <button class="tier-filter" onclick="filterByTier('V')">Tier V</button>
+                        <button class="tier-filter active">All</button>
+                        <button class="tier-filter">Tier I</button>
+                        <button class="tier-filter">Tier II</button>
+                        <button class="tier-filter">Tier III</button>
+                        <button class="tier-filter">Tier IV</button>
+                        <button class="tier-filter">Tier V</button>
                     </div>
                     <div class="equipment-list" id="equipmentList">
                         <!-- Equipment items will be populated by JavaScript -->
@@ -879,21 +160,21 @@ Copyright (C) 2024  @tux_koh
                     <h3>Potion Effects</h3>
                     <div class="potion-grid">
                         <div class="potion-item">
-                            <input type="checkbox" id="magicPotion" onchange="calculateDamage()">
+                            <input type="checkbox" id="magicPotion">
                             <div class="potion-info">
                                 <div class="potion-name">Magic Potion</div>
                                 <div class="potion-desc">1.75x Magic Damage</div>
                             </div>
                         </div>
                         <div class="potion-item">
-                            <input type="checkbox" id="attackPotion" onchange="calculateDamage()">
+                            <input type="checkbox" id="attackPotion">
                             <div class="potion-info">
                                 <div class="potion-name">Attack Potion</div>
                                 <div class="potion-desc">1.75x Attack Damage</div>
                             </div>
                         </div>
                         <div class="potion-item">
-                            <input type="checkbox" id="goldenApple" onchange="calculateDamage()">
+                            <input type="checkbox" id="goldenApple">
                             <div class="potion-info">
                                 <div class="potion-name">Golden Apple</div>
                                 <div class="potion-desc">1.5x Attack Damage</div>
@@ -960,20 +241,20 @@ Copyright (C) 2024  @tux_koh
                         <span class="result-value" id="resultDamageType">Physical</span>
                     </div>
                     
-                    <button class="extra-data-btn" onclick="showExtraData()">Show Extra Data</button>
+                    <button class="extra-data-btn">Show Extra Data</button>
                 </div>
 
-                <button class="calculate-btn" onclick="calculateDamage()">Calculate Damage</button>
-                <button class="optimize-btn" onclick="optimizeDamageAdvanced()" id="optimizeBtn">Find Best Combinations</button>
+                <button class="calculate-btn">Calculate Damage</button>
+                <button class="optimize-btn" id="optimizeBtn">Find Best Combinations</button>
                 
                 <!-- Optimization Results -->
                 <div class="panel-section optimize-result" id="optimizeResultSection" style="display: none;">
                     <h3>Top Damage Combinations</h3>
                     <div class="optimization-filters">
-                        <button class="filter-btn active" onclick="setOptimizationType('final_damage')">Final Damage Top 10</button>
-                        <button class="filter-btn" onclick="setOptimizationType('ten_second')">10s Total Damage Top 10</button>
-                        <button class="filter-btn" onclick="setOptimizationType('first_hit')">First Hit Top 10</button>
-                        <button class="filter-btn" onclick="setOptimizationType('dot')">DoT Damage Top 10</button>
+                        <button class="filter-btn active">Final Damage Top 10</button>
+                        <button class="filter-btn">10s Total Damage Top 10</button>
+                        <button class="filter-btn">First Hit Top 10</button>
+                        <button class="filter-btn">DoT Damage Top 10</button>
                     </div>
                     <div id="optimizeResultsContent">
                         <!-- Optimization results will be populated here -->
@@ -997,7 +278,7 @@ Copyright (C) 2024  @tux_koh
     <!-- Extra Data Modal -->
     <div id="extraDataModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal" onclick="closeExtraData()">&times;</span>
+            <span class="close-modal">&times;</span>
             <div class="modal-header">
                 <h2>Detailed Calculation Data</h2>
             </div>
@@ -1007,740 +288,6 @@ Copyright (C) 2024  @tux_koh
         </div>
     </div>
 
-    <script>
-        // Global variables
-        let selectedEquipment = [];
-        const maxEquipment = 3;
-        let equipmentDatabase = {{ equipment_db | tojson | safe }};
-        let weaponDatabase = {{ weapon_db | tojson | safe }};
-        let currentTierFilter = 'all';
-        let currentSearchFilter = '';
-        let currentResult = null;
-        let currentOptimizationType = 'final_damage';
-        
-        // Set indicator mapping
-        const setIndicators = {
-            'flame': { class: 'flame-set-indicator', text: 'Flame' },
-            'wolf_howl': { class: 'wolf-set-indicator', text: 'Wolf' },
-            'crimson': { class: 'crimson-set-indicator', text: 'Crimson' },
-            'queen_bee': { class: 'queen-bee-set-indicator', text: 'Queen Bee' },
-            'explorer': { class: 'explorer-set-indicator', text: 'Explorer' },
-            'forest_dweller': { class: 'forest-set-indicator', text: 'Forest' },
-            'library_ruina': { class: 'library-set-indicator', text: 'Library' },
-            'blessing': { class: 'blessing-set-indicator', text: 'Blessing' }
-        };
-        
-        // Initialize equipment list
-        function initializeEquipment() {
-            const equipmentList = document.getElementById('equipmentList');
-            equipmentList.innerHTML = '';
-            
-            Object.entries(equipmentDatabase).forEach(([id, data]) => {
-                if (filterEquipmentItem(id, data)) {
-                    const item = createEquipmentItem(id, data);
-                    equipmentList.appendChild(item);
-                }
-            });
-        }
-        
-        // Create equipment item element
-        function createEquipmentItem(id, data) {
-            const div = document.createElement('div');
-            div.className = 'equipment-item';
-            div.setAttribute('data-id', id);
-            div.setAttribute('data-tier', data.tier);
-            
-            // Check level requirement
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            const levelReq = data.level_req || 0;
-            const meetsLevelReq = levelReq <= playerLevel;
-            
-            if (!meetsLevelReq) {
-                div.style.opacity = '0.6';
-            }
-            
-            // Build stats string
-            const stats = [];
-            if (data.stats.atk_min !== undefined && data.stats.atk_max !== undefined) {
-                stats.push(`ATK: ${data.stats.atk_min}-${data.stats.atk_max}`);
-            } else if (data.stats.atk_min !== undefined) {
-                stats.push(`ATK: ${data.stats.atk_min}`);
-            }
-            if (data.stats.magic !== undefined) {
-                stats.push(`Magic: ${data.stats.magic}`);
-            }
-            if (data.stats.crit_chance !== undefined) {
-                stats.push(`Crit: +${data.stats.crit_chance}%`);
-            }
-            if (data.stats.crit_damage !== undefined) {
-                stats.push(`Crit DMG: +${data.stats.crit_damage}%`);
-            }
-            if (data.stats.health !== undefined) {
-                stats.push(`HP: +${data.stats.health}`);
-            }
-            if (data.stats.shield !== undefined) {
-                stats.push(`Shield: +${data.stats.shield}`);
-            }
-            
-            // Build effects string
-            const effects = [];
-            if (data.special_effects.damage_multiplier) {
-                effects.push(`${data.special_effects.damage_multiplier}x Damage`);
-            }
-            if (data.special_effects.double_damage_chance) {
-                effects.push(`${data.special_effects.double_damage_chance * 100}% 2x Damage`);
-            }
-            if (data.special_effects.burn_chance) {
-                effects.push(`+${data.special_effects.burn_chance * 100}% Burn`);
-            }
-            if (data.special_effects.bleed_chance) {
-                effects.push(`+${data.special_effects.bleed_chance * 100}% Bleed`);
-            }
-            if (data.special_effects.poison_chance) {
-                effects.push(`+${data.special_effects.poison_chance * 100}% Poison`);
-            }
-            if (data.special_effects.blood_butcher) {
-                effects.push('Blood Butcher Debuff');
-            }
-            if (data.special_effects.freeze_chance) {
-                effects.push(`+${data.special_effects.freeze_chance * 100}% Freeze`);
-            }
-            if (data.special_effects.dot_bonus) {
-                effects.push('+20% Magic to DoT');
-            }
-            
-            let setIndicator = '';
-            if (data.set && setIndicators[data.set]) {
-                const setInfo = setIndicators[data.set];
-                setIndicator = `<span class="${setInfo.class} set-indicators">${setInfo.text}</span>`;
-            }
-            
-            // Add level requirement info
-            let levelInfo = '';
-            if (levelReq > 0) {
-                levelInfo = `<span style="color: ${meetsLevelReq ? '#28a745' : '#dc3545'}; font-size: 0.8em;">Lv. ${levelReq}</span>`;
-            }
-            
-            div.innerHTML = `
-                <div class="equipment-header">
-                    <div class="equipment-name">${data.name} ${levelInfo} ${setIndicator}</div>
-                    <div class="equipment-tier">T${data.tier}</div>
-                </div>
-                <div class="equipment-stats">${stats.join(', ')}</div>
-                <div class="equipment-effects">${effects.join(', ')}</div>
-            `;
-            
-            // Only allow selection if level requirement is met
-            if (meetsLevelReq) {
-                div.addEventListener('click', () => toggleEquipmentSelection(id, data));
-            } else {
-                div.style.cursor = 'not-allowed';
-                div.title = `Requires Level ${levelReq}`;
-            }
-            
-            return div;
-        }
-        
-        // Filter equipment based on search and tier
-        function filterEquipmentItem(id, data) {
-            const matchesSearch = data.name.toLowerCase().includes(currentSearchFilter.toLowerCase()) ||
-                                id.toLowerCase().includes(currentSearchFilter.toLowerCase());
-            const matchesTier = currentTierFilter === 'all' || data.tier === currentTierFilter;
-            
-            return matchesSearch && matchesTier;
-        }
-        
-        // Filter equipment list
-        function filterEquipment() {
-            currentSearchFilter = document.getElementById('equipmentSearch').value;
-            initializeEquipment();
-        }
-        
-        // Filter by tier
-        function filterByTier(tier) {
-            currentTierFilter = tier;
-            document.querySelectorAll('.tier-filter').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            initializeEquipment();
-        }
-        
-        // Update equipment display when level changes
-        function updateEquipmentDisplay() {
-            initializeEquipment();
-            // Remove equipment that no longer meets level requirements
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            selectedEquipment = selectedEquipment.filter(id => {
-                const eqData = equipmentDatabase[id];
-                const meetsLevelReq = (eqData.level_req || 0) <= playerLevel;
-                if (!meetsLevelReq) {
-                    const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
-                    if (element) element.classList.remove('selected');
-                }
-                return meetsLevelReq;
-            });
-            updateSelectedEquipmentDisplay();
-            addPointLimits();
-            updatePoints();
-            calculateDamage();
-        }
-        
-        // Toggle equipment selection
-        function toggleEquipmentSelection(id, data) {
-            if (selectedEquipment.includes(id)) {
-                // Deselect
-                selectedEquipment = selectedEquipment.filter(eq => eq !== id);
-                document.querySelector(`.equipment-item[data-id="${id}"]`).classList.remove('selected');
-            } else {
-                // Select
-                if (selectedEquipment.length < maxEquipment) {
-                    selectedEquipment.push(id);
-                    document.querySelector(`.equipment-item[data-id="${id}"]`).classList.add('selected');
-                } else {
-                    alert('You can only select up to 3 equipment items!');
-                }
-            }
-            updateSelectedEquipmentDisplay();
-            calculateDamage();
-        }
-        
-        // Update selected equipment display
-        function updateSelectedEquipmentDisplay() {
-            const container = document.getElementById('selectedEquipment');
-            container.innerHTML = '';
-            
-            selectedEquipment.forEach(id => {
-                const data = equipmentDatabase[id];
-                const div = document.createElement('div');
-                div.className = 'selected-item';
-                div.innerHTML = `
-                    ${data.name}
-                    <button class="remove-item" onclick="removeEquipment('${id}')">×</button>
-                `;
-                container.appendChild(div);
-            });
-        }
-        
-        // Remove equipment
-        function removeEquipment(id) {
-            selectedEquipment = selectedEquipment.filter(eq => eq !== id);
-            document.querySelector(`.equipment-item[data-id="${id}"]`).classList.remove('selected');
-            updateSelectedEquipmentDisplay();
-            calculateDamage();
-        }
-        
-        // Weapon selection
-        function updateWeaponInfo() {
-            const weaponSelect = document.getElementById('weaponSelect');
-            const weaponInfo = document.getElementById('weaponInfo');
-            const selectedWeapon = weaponSelect.value;
-            
-            if (selectedWeapon && weaponDatabase[selectedWeapon]) {
-                const weapon = weaponDatabase[selectedWeapon];
-                const stats = [];
-                
-                if (weapon.stats.atk_min !== undefined && weapon.stats.atk_max !== undefined) {
-                    stats.push(`ATK: ${weapon.stats.atk_min}-${weapon.stats.atk_max}`);
-                } else if (weapon.stats.atk_min !== undefined) {
-                    stats.push(`ATK: ${weapon.stats.atk_min}`);
-                }
-                if (weapon.stats.magic !== undefined) {
-                    stats.push(`Magic: ${weapon.stats.magic}`);
-                }
-                if (weapon.stats.crit_chance !== undefined) {
-                    stats.push(`Crit: +${weapon.stats.crit_chance}%`);
-                }
-                if (weapon.stats.crit_damage !== undefined) {
-                    stats.push(`Crit DMG: +${weapon.stats.crit_damage}%`);
-                }
-                
-                const damageType = weapon.type === 'staff' ? 'Magic' : 'Physical';
-                
-                let setInfo = '';
-                if (weapon.set && setIndicators[weapon.set]) {
-                    const setData = setIndicators[weapon.set];
-                    setInfo = `<span class="${setData.class} set-indicators">${setData.text}</span>`;
-                }
-                
-                // Add level requirement
-                const levelReq = weapon.level_req || 0;
-                let levelInfo = '';
-                if (levelReq > 0) {
-                    levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
-                }
-                
-                // Furioso special info
-                let furiosoInfo = '';
-                if (selectedWeapon === 'furioso') {
-                    furiosoInfo = `<br><small style="color: #4a90e2;">Updated: 3.7x total damage + bleed on 4th hit</small>`;
-                }
-                
-                weaponInfo.innerHTML = `
-                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}${furiosoInfo}<br>
-                    ${stats.join(', ')}
-                `;
-            } else {
-                weaponInfo.innerHTML = 'No weapon selected';
-            }
-        }
-        
-        // Toggle input system
-        function toggleInputSystem(system) {
-            document.getElementById('togglePoints').classList.toggle('active', system === 'points');
-            document.getElementById('toggleManual').classList.toggle('active', system === 'manual');
-            document.getElementById('pointsSection').style.display = system === 'points' ? 'block' : 'none';
-            document.getElementById('manualSection').style.display = system === 'manual' ? 'block' : 'none';
-            
-            calculateDamage();
-        }
-        
-        // Update points calculation
-        function updatePoints() {
-            const strength = parseInt(document.getElementById('strength').value) || 0;
-            const vitality = parseInt(document.getElementById('vitality').value) || 0;
-            const intelligence = parseInt(document.getElementById('intelligence').value) || 0;
-            const dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-            const defense = parseInt(document.getElementById('defense').value) || 0;
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            
-            const total = strength + vitality + intelligence + dexterity + defense;
-            const maxPoints = playerLevel * 2;
-            
-            document.getElementById('totalPoints').textContent = total;
-            document.getElementById('remainingPoints').textContent = maxPoints - total;
-            document.getElementById('maxPoints').textContent = maxPoints;
-            
-            // Update title display
-            document.querySelector('#pointsSection h3').innerHTML = `Attribute Points (Level ${playerLevel}) <button class="small-btn" onclick="optimizeStats()">Optimize Stats</button>`;
-            
-            calculateDamage();
-        }
-        
-        // Set optimization type
-        function setOptimizationType(type) {
-            currentOptimizationType = type;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-        }
-        
-        // Main damage calculation function
-        function calculateDamage() {
-            const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
-            const selectedWeapon = document.getElementById('weaponSelect').value;
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            
-            const data = {
-                usePointSystem: usePointSystem,
-                selectedWeapon: selectedWeapon,
-                playerLevel: playerLevel,
-                equipment: selectedEquipment,
-                magicPotion: document.getElementById('magicPotion').checked,
-                attackPotion: document.getElementById('attackPotion').checked,
-                goldenApple: document.getElementById('goldenApple').checked
-            };
-            
-            if (usePointSystem) {
-                data.strength = parseInt(document.getElementById('strength').value) || 0;
-                data.vitality = parseInt(document.getElementById('vitality').value) || 0;
-                data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
-                data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-                data.defense = parseInt(document.getElementById('defense').value) || 0;
-            } else {
-                data.minDamage = document.getElementById('minDamage').value;
-                data.maxDamage = document.getElementById('maxDamage').value;
-                data.magicDamage = document.getElementById('magicDamage').value;
-                data.critRate = document.getElementById('critRate').value;
-                data.critDamage = document.getElementById('critDamage').value;
-            }
-            
-            // Don't calculate if required fields are empty
-            if (!usePointSystem && (!data.minDamage || !data.maxDamage || !data.magicDamage)) {
-                return;
-            }
-            
-            fetch('/calculate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    currentResult = result;
-                    
-                    // Update results display
-                    document.getElementById('resultBaseDamage').textContent = result.base_damage.toLocaleString();
-                    document.getElementById('resultCrit').textContent = result.crit_multiplied_damage.toLocaleString();
-                    document.getElementById('resultDot').textContent = result.dot_damage.toLocaleString();
-                    document.getElementById('resultFinal').textContent = result.final_damage.toLocaleString();
-                    document.getElementById('resultMultiplier').textContent = result.effective_multiplier + 'x';
-                    document.getElementById('resultCritRate').textContent = result.crit_rate.toLocaleString() + '%';
-                    document.getElementById('resultCritDamage').textContent = result.crit_damage.toLocaleString() + '%';
-                    document.getElementById('resultDamageType').textContent = result.damage_type === 'magic' ? 'Magic' : 'Physical';
-                    
-                    // Update ten second damage display
-                    if (result.ten_second_damage) {
-                        document.getElementById('resultTenSecond').textContent = result.ten_second_damage.total_damage.toLocaleString();
-                        document.getElementById('resultMechanic').textContent = result.ten_second_damage.mechanic;
-                    }
-                    
-                    // Show player stats if using point system
-                    if (result.calculated_stats && result.player_stats) {
-                        document.getElementById('playerStatsSection').style.display = 'block';
-                        
-                        const damageTypeDisplay = result.damage_type === 'magic' ? 'Magic' : 'Physical';
-                        
-                        document.getElementById('playerStatsContent').innerHTML = `
-                            <div class="result-item">
-                                <span class="result-label">Health:</span>
-                                <span class="result-value">${result.player_stats.health.toLocaleString()}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Shield:</span>
-                                <span class="result-value">${result.player_stats.shield.toLocaleString()}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Total HP:</span>
-                                <span class="result-value">${result.player_stats.total_hp.toLocaleString()}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Attack Range:</span>
-                                <span class="result-value">${result.player_stats.min_damage.toLocaleString()} - ${result.player_stats.max_damage.toLocaleString()}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Magic Damage:</span>
-                                <span class="result-value">${result.player_stats.magic_damage.toLocaleString()}</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Crit Rate:</span>
-                                <span class="result-value">${result.crit_rate.toLocaleString()}%</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Crit Damage:</span>
-                                <span class="result-value">${result.crit_damage.toLocaleString()}%</span>
-                            </div>
-                        `;
-                    } else {
-                        document.getElementById('playerStatsSection').style.display = 'none';
-                    }
-                    
-                    document.getElementById('resultSection').style.display = 'block';
-                }
-            })
-            .catch(error => {
-                console.error('Error calculating damage:', error);
-            });
-        }
-        
-        // Optimize damage function
-        function optimizeDamageAdvanced() {
-            const optimizeBtn = document.getElementById('optimizeBtn');
-            optimizeBtn.textContent = 'Calculating...';
-            optimizeBtn.disabled = true;
-
-            const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
-            const selectedWeapon = document.getElementById('weaponSelect').value;
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            
-            const data = {
-                usePointSystem: usePointSystem,
-                selectedWeapon: selectedWeapon,
-                playerLevel: playerLevel,
-                magicPotion: document.getElementById('magicPotion').checked,
-                attackPotion: document.getElementById('attackPotion').checked,
-                goldenApple: document.getElementById('goldenApple').checked,
-                optimizationType: currentOptimizationType
-            };
-            
-            if (usePointSystem) {
-                data.strength = parseInt(document.getElementById('strength').value) || 0;
-                data.vitality = parseInt(document.getElementById('vitality').value) || 0;
-                data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
-                data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-                data.defense = parseInt(document.getElementById('defense').value) || 0;
-            } else {
-                data.minDamage = document.getElementById('minDamage').value;
-                data.maxDamage = document.getElementById('maxDamage').value;
-                data.magicDamage = document.getElementById('magicDamage').value;
-                data.critRate = document.getElementById('critRate').value;
-                data.critDamage = document.getElementById('critDamage').value;
-            }
-            
-            fetch('/optimize_advanced', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    displayOptimizationResults(result);
-                } else {
-                    alert('Optimization failed: ' + result.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error optimizing damage:', error);
-                alert('Optimization failed due to an error.');
-            })
-            .finally(() => {
-                optimizeBtn.textContent = 'Find Best Combinations';
-                optimizeBtn.disabled = false;
-            });
-        }
-
-        // Display optimization results
-        function displayOptimizationResults(result) {
-            const section = document.getElementById('optimizeResultSection');
-            const content = document.getElementById('optimizeResultsContent');
-            
-            let html = `<p>Tested ${result.total_combinations_tested.toLocaleString()} combinations (${result.available_equipment_count} available equipment)</p>`;
-            
-            const scoreLabel = {
-                'final_damage': 'Final Damage',
-                'ten_second': '10s Total Damage', 
-                'first_hit': 'First Hit',
-                'dot': 'DoT Damage'
-            }[result.optimization_type] || 'Score';
-            
-            result.top_combinations.forEach((combo, index) => {
-                html += `
-                    <div class="optimize-combo">
-                        <h4>#${index + 1} - ${scoreLabel}: ${combo.score.toLocaleString()}</h4>
-                        <p><strong>Final Damage:</strong> ${combo.final_damage.toLocaleString()}</p>
-                        <p><strong>10s Total Damage:</strong> ${combo.ten_second_total.toLocaleString()}</p>
-                        <p><strong>First Hit:</strong> ${combo.first_hit.toLocaleString()}</p>
-                        <p><strong>DoT Damage:</strong> ${combo.dot_damage.toLocaleString()}</p>
-                        <p><strong>Equipment:</strong> ${combo.equipment_names.join(', ')}</p>
-                        <p><strong>Crit:</strong> ${combo.crit_rate}% rate, ${combo.crit_damage}% damage</p>
-                        <button onclick="applyOptimizedCombo(${JSON.stringify(combo.equipment_ids).replace(/"/g, '&quot;')})">Apply This Combo</button>
-                    </div>
-                `;
-            });
-            
-            content.innerHTML = html;
-            section.style.display = 'block';
-        }
-
-        // Apply optimized combination
-        function applyOptimizedCombo(equipmentIds) {
-            // Clear current selection
-            selectedEquipment.forEach(id => {
-                const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
-                if (element) element.classList.remove('selected');
-            });
-            
-            // Select new equipment
-            selectedEquipment = [...equipmentIds];
-            selectedEquipment.forEach(id => {
-                const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
-                if (element) element.classList.add('selected');
-            });
-            
-            updateSelectedEquipmentDisplay();
-            calculateDamage();
-            
-            // Scroll to results
-            document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Stats optimization function
-        function optimizeStats() {
-            const vitality = parseInt(document.getElementById('vitality').value) || 0;
-            const selectedWeapon = document.getElementById('weaponSelect').value;
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            
-            const data = {
-                vitality: vitality,
-                selectedWeapon: selectedWeapon,
-                playerLevel: playerLevel
-            };
-            
-            fetch('/optimize_stats', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    applyOptimizedStats(result.recommendation);
-                } else {
-                    alert('Stats optimization failed: ' + result.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error optimizing stats:', error);
-                alert('Stats optimization failed due to an error.');
-            });
-        }
-
-        // Apply optimized stats
-        function applyOptimizedStats(recommendation) {
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            
-            document.getElementById('strength').value = recommendation.strength;
-            document.getElementById('intelligence').value = recommendation.intelligence;
-            document.getElementById('dexterity').value = recommendation.dexterity;
-            document.getElementById('defense').value = recommendation.defense;
-            
-            updatePoints();
-            calculateDamage();
-            
-            alert(`Optimized stats applied!\n${recommendation.reason}\n\nStrength: ${recommendation.strength}\nIntelligence: ${recommendation.intelligence}\nDexterity: ${recommendation.dexterity}\nDefense: ${recommendation.defense}\n\nTotal Used: ${recommendation.total_used}/${playerLevel * 2}`);
-        }
-        
-        // Show extra data modal
-        function showExtraData() {
-            if (!currentResult) return;
-            
-            const modal = document.getElementById('extraDataModal');
-            const content = document.getElementById('extraDataContent');
-            
-            const details = currentResult.calculation_details;
-            
-            let html = `
-                <div class="detail-section">
-                    <h4>Base Stats</h4>
-                    <div class="detail-item">
-                        <span>Min Damage:</span>
-                        <span>${details.base_stats.min_damage.toLocaleString()}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Max Damage:</span>
-                        <span>${details.base_stats.max_damage.toLocaleString()}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Magic Damage:</span>
-                        <span>${details.base_stats.magic_damage.toLocaleString()}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Base Crit Rate:</span>
-                        <span>${details.base_stats.base_crit_rate.toLocaleString()}%</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Base Crit Damage:</span>
-                        <span>${details.base_stats.base_crit_damage.toLocaleString()}%</span>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <h4>After Equipment</h4>
-                    <div class="detail-item">
-                        <span>Total Crit Rate:</span>
-                        <span>${details.after_equipment.total_crit_rate.toLocaleString()}%</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Total Crit Damage:</span>
-                        <span>${details.after_equipment.total_crit_damage.toLocaleString()}%</span>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <h4>Crit Calculation</h4>
-                    <div class="detail-item">
-                        <span>Effective Crit Rate:</span>
-                        <span>${details.crit_calculation.crit_rate_percent.toFixed(1)}%</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Crit Damage Multiplier:</span>
-                        <span>${details.crit_calculation.crit_damage_multiplier.toFixed(2)}x</span>
-                    </div>
-                    <div class="detail-item">
-                        <span>Crit Base Damage:</span>
-                        <span>${details.crit_calculation.crit_base_damage.toLocaleString()}</span>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <h4>Set Bonuses Applied</h4>
-            `;
-            
-            Object.entries(currentResult.set_bonuses_applied).forEach(([set, applied]) => {
-                if (applied) {
-                    html += `<div class="detail-item">
-                        <span>${set.replace('_', ' ').toUpperCase()}:</span>
-                        <span>✓ Active</span>
-                    </div>`;
-                }
-            });
-            
-            html += `</div>`;
-            
-            if (currentResult.dot_damage > 0) {
-                html += `
-                    <div class="detail-section">
-                        <h4>DoT Calculations</h4>
-                        <div class="detail-item">
-                            <span>Burn Chance:</span>
-                            <span>${(details.dot_calculation.burn_chance * 100).toFixed(1)}%</span>
-                        </div>
-                        <div class="detail-item">
-                            <span>Bleed Chance:</span>
-                            <span>${(details.dot_calculation.bleed_chance * 100).toFixed(1)}%</span>
-                        </div>
-                        <div class="detail-item">
-                            <span>Poison Chance:</span>
-                            <span>${(details.dot_calculation.poison_chance * 100).toFixed(1)}%</span>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            content.innerHTML = html;
-            modal.style.display = 'block';
-        }
-        
-        // Close extra data modal
-        function closeExtraData() {
-            document.getElementById('extraDataModal').style.display = 'none';
-        }
-        
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('extraDataModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        }
-        
-        // Add point limits to input fields
-        function addPointLimits() {
-            const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-            const maxPoints = playerLevel * 2;
-            
-            // Set input field maximum values
-            document.getElementById('strength').max = maxPoints;
-            document.getElementById('vitality').max = maxPoints;
-            document.getElementById('intelligence').max = maxPoints;
-            document.getElementById('dexterity').max = 50; // DEX still capped at 50
-            document.getElementById('defense').max = maxPoints;
-        }
-
-        // Auto-calculate when inputs change
-        document.getElementById('minDamage')?.addEventListener('input', calculateDamage);
-        document.getElementById('maxDamage')?.addEventListener('input', calculateDamage);
-        document.getElementById('magicDamage')?.addEventListener('input', calculateDamage);
-        document.getElementById('critRate')?.addEventListener('input', calculateDamage);
-        document.getElementById('critDamage')?.addEventListener('input', calculateDamage);
-        
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeEquipment();
-            addPointLimits();
-            updatePoints();
-            updateWeaponInfo();
-            calculateDamage();
-        });
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
