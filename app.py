@@ -172,10 +172,10 @@ class DamageCalculator:
                 'mechanic': 'Reverberation: 4.8x total damage in 10 seconds (4 hits)'
             }
         
-        elif weapon_type == 'furioso':  # Furioso
-            # 5.42 hits in 10 seconds: 5.42x total multiplier + DoT
-            total_base_damage = base_damage_per_hit * 5.42
-            total_dot_damage = dot_damage_per_hit * 5.42
+        elif weapon_type == 'furioso':  # Furioso - UPDATED
+            # 4 hits in 10 seconds: 3.7x total multiplier + DoT + bleed on 4th hit
+            total_base_damage = base_damage_per_hit * 3.7  # Changed from 5.42 to 3.7
+            total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
             
             return {
@@ -185,7 +185,7 @@ class DamageCalculator:
                 'hit_4': base_damage_per_hit + dot_damage_per_hit,
                 'hit_5': base_damage_per_hit + dot_damage_per_hit,
                 'total_damage': total_damage,
-                'mechanic': 'Furioso: 5.42x total damage in 10 seconds (5.42 hits)'
+                'mechanic': 'Furioso: 3.7x total damage + bleed on 4th hit in 10 seconds (4 hits)'
             }
         
         else:  # Default (no special mechanic)
