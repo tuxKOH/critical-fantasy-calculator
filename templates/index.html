@@ -6,10 +6,42 @@ Copyright (C) 2024  @tux_koh
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="google-site-verification" content="KiK7XIVWG3U7nQB-1KQ46yyWdxAFbzTE8OsJ1bFT-h4" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fantasy Damage Calculator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* 圖片加載樣式 */
+        .weapon-image {
+            float: left;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .weapon-image img {
+            max-width: 60px;
+            max-height: 60px;
+            object-fit: contain;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* 確保清除浮動 */
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+        
+        /* 優化結果中的混合版本標記 */
+        .mixed-version-tag {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
+    </style>
     <script>
         // Make database available to JavaScript
         window.equipmentDb = {{ equipment_db | tojson | safe }};
@@ -37,6 +69,22 @@ Copyright (C) 2024  @tux_koh
                             Manual Input
                         </div>
                     </div>
+                </div>
+
+                <!-- Game Version Selection -->
+                <div class="panel-section">
+                    <h3>Game Version</h3>
+                    <div class="system-toggle">
+                        <div class="toggle-option active" id="toggleCurrent">
+                            Current Version
+                        </div>
+                        <div class="toggle-option" id="toggleOld">
+                            Old Version (KPatch1)
+                        </div>
+                    </div>
+                    <p class="version-note">
+                        <strong>Note:</strong> Old version items can be mixed with current version items, but not with their own updated versions.
+                    </p>
                 </div>
 
                 <!-- Player Level -->
@@ -75,7 +123,7 @@ Copyright (C) 2024  @tux_koh
                 
                 <!-- Attribute Points Section -->
                 <div class="panel-section" id="pointsSection">
-                    <h3>Attribute Points (Level 190) <button class="small-btn">Optimize Stats</button></h3>
+                    <h3>Attribute Points (Level 190) <button class="small-btn" id="optimizeStatsBtn">Optimize Stats</button></h3>
                     <div class="attribute-points">
                         <div class="point-input">
                             <label for="strength">Strength:</label>
