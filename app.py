@@ -211,6 +211,9 @@ class DamageCalculator:
     @staticmethod
     def calculate_damage(data):
         try:
+            # 獲取版本設置
+            use_old_version = data.get('useOldVersion', False)
+            
             # Get base values - either from manual input or calculated from points
             use_point_system = data.get('usePointSystem', False)
             selected_weapon = data.get('selectedWeapon', '')
@@ -407,16 +410,26 @@ class DamageCalculator:
             has_volatile_gem = False
             
             # Check for flame set items and calculate burn chance
+            # KPatch2: 需要檢查新舊版本的裝備
             flame_items = ['daybreak', 'evernight', 'volatile_gem']
+            flame_old_items = ['daybreak_old', 'evernight_old', 'volatile_gem_old']
+            
+            # 根據版本選擇要檢查的項目
+            if use_old_version:
+                items_to_check = flame_old_items
+            else:
+                items_to_check = flame_items
+            
             for item in equipment:
-                if item in flame_items:
+                if item in items_to_check or (use_old_version and item in flame_items):
                     eq_data = EQUIPMENT_DB.get(item, {})
                     special_effects = eq_data.get('special_effects', {})
-                    if item == 'daybreak':
+                    
+                    if item in ['daybreak', 'daybreak_old']:
                         burn_chance += special_effects.get('burn_chance', 0.52)
-                    elif item == 'evernight':
+                    elif item in ['evernight', 'evernight_old']:
                         burn_chance += special_effects.get('burn_chance', 0.40)
-                    elif item == 'volatile_gem':
+                    elif item in ['volatile_gem', 'volatile_gem_old']:
                         burn_chance += special_effects.get('burn_chance', 0.11)
                         poison_chance += special_effects.get('poison_chance', 0.11)
                         has_volatile_gem = True
@@ -428,10 +441,15 @@ class DamageCalculator:
                 print(f"Flame Set Bonus Applied: +10% burn chance (Count: {flame_set_count})")
             
             # Queenbee Crown (bleeding)
-            if 'queenbee_crown' in equipment:
-                eq_data = EQUIPMENT_DB.get('queenbee_crown', {})
+            if 'queenbee_crown' in equipment or 'queenbee_crown_old' in equipment:
+                eq_id = 'queenbee_crown_old' if 'queenbee_crown_old' in equipment else 'queenbee_crown'
+                eq_data = EQUIPMENT_DB.get(eq_id, {})
                 special_effects = eq_data.get('special_effects', {})
                 bleed_chance += special_effects.get('bleed_chance', 0.26)
+            
+            # Volatile Gem (新版本) - 增加流血機率，但只在當前版本中
+            if 'volatile_gem' in equipment and not use_old_version:
+                bleed_chance += 0.10
             
             # Calculate burn damage (uses potion-boosted magic damage)
             if burn_chance > 0:
@@ -452,7 +470,7 @@ class DamageCalculator:
                 dot_damage += poison_damage * min(poison_chance, 1)
             
             # Blood Butcher - uses potion-boosted min physical damage
-            if 'blood_butcher' in equipment:
+            if 'blood_butcher' in equipment or 'blood_butcher_old' in equipment:
                 blood_damage = effective_min_damage * 0.05 * 9
                 dot_damage += blood_damage
             
@@ -543,7 +561,8 @@ class DamageCalculator:
                     'total_damage': round(ten_second_data['total_damage'], 2),
                     'mechanic': ten_second_data['mechanic']
                 },
-                'calculation_details': calculation_details
+                'calculation_details': calculation_details,
+                'version': 'old' if use_old_version else 'current'
             }
             
             if use_point_system:
@@ -603,7 +622,8 @@ def optimize_damage():
             'selectedWeapon': data.get('selectedWeapon', ''),
             'magicPotion': data.get('magicPotion', False),
             'attackPotion': data.get('attackPotion', False),
-            'goldenApple': data.get('goldenApple', False)
+            'goldenApple': data.get('goldenApple', False),
+            'useOldVersion': data.get('useOldVersion', False)
         }
         
         if base_config['usePointSystem']:
@@ -623,8 +643,21 @@ def optimize_damage():
                 'critDamage': data.get('critDamage', 100)
             })
         
-        # Get all equipment IDs
-        all_equipment = list(EQUIPMENT_DB.keys())
+        # Get all equipment IDs based on version
+        use_old_version = base_config.get('useOldVersion', False)
+        
+        if use_old_version:
+            # For old version, use items that have _old suffix or don't have a _new counterpart
+            all_equipment = []
+            for eq_id in EQUIPMENT_DB.keys():
+                if eq_id.endswith('_old'):
+                    all_equipment.append(eq_id)
+                elif '_old' not in eq_id and eq_id + '_old' not in EQUIPMENT_DB:
+                    all_equipment.append(eq_id)
+        else:
+            # For current version, exclude _old items
+            all_equipment = [eq_id for eq_id in EQUIPMENT_DB.keys() if not eq_id.endswith('_old')]
+        
         max_equipment = 3
         
         # Generate all possible combinations
@@ -671,7 +704,8 @@ def optimize_damage():
         return jsonify({
             'success': True,
             'top_combinations': formatted_results,
-            'total_combinations_tested': len(all_combinations)
+            'total_combinations_tested': len(all_combinations),
+            'version': 'old' if use_old_version else 'current'
         })
         
     except Exception as e:
@@ -679,7 +713,7 @@ def optimize_damage():
 
 @app.route('/optimize_advanced', methods=['POST'])
 def optimize_damage_advanced():
-    """Find the best equipment combinations with different criteria"""
+    """Find the best equipment combinations with different criteria - SUPPORTS MIXED VERSIONS"""
     data = request.get_json()
     
     try:
@@ -690,7 +724,8 @@ def optimize_damage_advanced():
             'magicPotion': data.get('magicPotion', False),
             'attackPotion': data.get('attackPotion', False),
             'goldenApple': data.get('goldenApple', False),
-            'playerLevel': data.get('playerLevel', 190)  # Default to max level
+            'playerLevel': data.get('playerLevel', 190),  # Default to max level
+            'useOldVersion': data.get('useOldVersion', False)
         }
         
         if base_config['usePointSystem']:
@@ -714,24 +749,72 @@ def optimize_damage_advanced():
         
         # Get all equipment IDs that meet level requirement
         player_level = base_config['playerLevel']
-        available_equipment = [
-            eq_id for eq_id, eq_data in EQUIPMENT_DB.items() 
-            if eq_data.get('level_req', 0) <= player_level
-        ]
+        use_old_version = base_config.get('useOldVersion', False)
+        
+        available_equipment = []
+        for eq_id, eq_data in EQUIPMENT_DB.items():
+            # Check level requirement
+            if eq_data.get('level_req', 0) > player_level:
+                continue
+            
+            # For optimization, include both versions to allow mixing
+            # but respect the version setting for filtering
+            if use_old_version:
+                # For old version optimization, prioritize old items but allow current if no old exists
+                if eq_id.endswith('_old'):
+                    available_equipment.append(eq_id)
+                elif '_old' not in eq_id and eq_id + '_old' not in EQUIPMENT_DB:
+                    # Only include current version if there's no old version
+                    available_equipment.append(eq_id)
+            else:
+                # For current version, include current and old items (for mixing)
+                available_equipment.append(eq_id)
         
         max_equipment = 3
         
         # Generate all possible combinations from available equipment
         all_combinations = list(combinations(available_equipment, max_equipment))
         
+        # Filter combinations to prevent mixing old and new versions of the same item
+        filtered_combinations = []
+        for combo in all_combinations:
+            valid = True
+            items_by_base = {}
+            
+            # Group items by base name
+            for item_id in combo:
+                base_name = item_id.replace('_old', '')
+                if base_name not in items_by_base:
+                    items_by_base[base_name] = []
+                items_by_base[base_name].append(item_id)
+            
+            # Check for conflicts (both old and new versions of same item)
+            for base_name, versions in items_by_base.items():
+                if len(versions) > 1:
+                    # Check if we have both old and new versions
+                    has_old = any('_old' in v for v in versions)
+                    has_new = any('_old' not in v for v in versions)
+                    if has_old and has_new:
+                        valid = False
+                        break
+            
+            if valid:
+                filtered_combinations.append(combo)
+        
+        print(f"Total combinations: {len(all_combinations)}, Valid after filtering: {len(filtered_combinations)}")
+        
         # Test each combination and find the best ones
         results = []
-        for i, combo in enumerate(all_combinations):
+        for i, combo in enumerate(filtered_combinations):
             if i % 100 == 0:  # Progress tracking
-                print(f"Testing combination {i}/{len(all_combinations)}")
+                print(f"Testing combination {i}/{len(filtered_combinations)}")
             
             test_config = base_config.copy()
             test_config['equipment'] = list(combo)
+            
+            # Override version setting for mixed calculations
+            # When mixing, we need to check if there are any old items in the combo
+            has_old_items = any('_old' in item_id for item_id in combo)
             
             result = DamageCalculator.calculate_damage(test_config)
             if result['success']:
@@ -755,7 +838,8 @@ def optimize_damage_advanced():
                     'dot_damage': result['dot_damage'],
                     'crit_rate': result['crit_rate'],
                     'crit_damage': result['crit_damage'],
-                    'score': score
+                    'score': score,
+                    'has_old_items': has_old_items
                 })
         
         # Sort by score (descending)
@@ -767,7 +851,14 @@ def optimize_damage_advanced():
         # Format results with equipment names
         formatted_results = []
         for combo in top_combinations:
-            equipment_names = [EQUIPMENT_DB[eq_id]['name'] for eq_id in combo['equipment']]
+            equipment_names = []
+            for eq_id in combo['equipment']:
+                eq_data = EQUIPMENT_DB[eq_id]
+                name = eq_data['name']
+                if eq_id.endswith('_old'):
+                    name = f"{name} (Old)"
+                equipment_names.append(name)
+            
             formatted_results.append({
                 'equipment_ids': combo['equipment'],
                 'equipment_names': equipment_names,
@@ -777,15 +868,18 @@ def optimize_damage_advanced():
                 'dot_damage': round(combo['dot_damage'], 2),
                 'crit_rate': round(combo['crit_rate'], 1),
                 'crit_damage': round(combo['crit_damage'], 1),
-                'score': round(combo['score'], 2)
+                'score': round(combo['score'], 2),
+                'has_old_items': combo.get('has_old_items', False)
             })
         
         return jsonify({
             'success': True,
             'top_combinations': formatted_results,
-            'total_combinations_tested': len(all_combinations),
+            'total_combinations_tested': len(filtered_combinations),
             'optimization_type': optimization_type,
-            'available_equipment_count': len(available_equipment)
+            'available_equipment_count': len(available_equipment),
+            'allows_mixed_versions': True,
+            'version': 'mixed' if any(r.get('has_old_items', False) for r in top_combinations) else 'current'
         })
         
     except Exception as e:
