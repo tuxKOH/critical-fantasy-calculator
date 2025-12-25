@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSearchFilter = '';
     let currentResult = null;
     let currentOptimizationType = 'final_damage';
+    let currentVersion = 'current'; // 'current' or 'old'
     
     // Set indicator mapping
     const setIndicators = {
@@ -57,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Create equipment item element
+    // Create equipment item element with image support
     function createEquipmentItem(id, data) {
         const div = document.createElement('div');
         div.className = 'equipment-item';
@@ -71,6 +72,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!meetsLevelReq) {
             div.style.opacity = '0.6';
+        }
+        
+        // Check if it's an old version item
+        const isOldItem = id.includes('_old');
+        if (isOldItem) {
+            div.classList.add('equipment-old');
         }
         
         // Build stats string
@@ -129,19 +136,41 @@ document.addEventListener('DOMContentLoaded', function() {
             setIndicator = `<span class="${setInfo.class} set-indicators">${setInfo.text}</span>`;
         }
         
-        // Add level requirement info
+        // Add version and level requirement info
+        let versionInfo = '';
+        if (isOldItem) {
+            versionInfo = `<span class="old-version-tag">OLD</span>`;
+        }
+        
         let levelInfo = '';
         if (levelReq > 0) {
             levelInfo = `<span style="color: ${meetsLevelReq ? '#28a745' : '#dc3545'}; font-size: 0.8em;">Lv. ${levelReq}</span>`;
         }
         
+        // Add image if available
+        let imageHtml = '';
+        if (data.image_url && data.image_url.trim()) {
+            // Clean up the URL
+            const cleanUrl = data.image_url.trim();
+            imageHtml = `
+                <div class="equipment-image">
+                    <img src="${cleanUrl}" alt="${data.name}" 
+                         onerror="this.style.display='none'"
+                         style="max-width: 40px; max-height: 40px; object-fit: contain; margin-right: 8px;">
+                </div>
+            `;
+        }
+        
         div.innerHTML = `
             <div class="equipment-header">
-                <div class="equipment-name">${data.name} ${levelInfo} ${setIndicator}</div>
+                ${imageHtml}
+                <div style="flex: 1;">
+                    <div class="equipment-name">${data.name} ${versionInfo} ${levelInfo} ${setIndicator}</div>
+                    <div class="equipment-stats">${stats.join(', ')}</div>
+                    <div class="equipment-effects">${effects.join(', ')}</div>
+                </div>
                 <div class="equipment-tier">T${data.tier}</div>
             </div>
-            <div class="equipment-stats">${stats.join(', ')}</div>
-            <div class="equipment-effects">${effects.join(', ')}</div>
         `;
         
         // Only allow selection if level requirement is met
@@ -155,13 +184,20 @@ document.addEventListener('DOMContentLoaded', function() {
         return div;
     }
     
-    // Filter equipment based on search and tier
+    // Filter equipment based on search, tier, and version
     function filterEquipmentItem(id, data) {
         const matchesSearch = data.name.toLowerCase().includes(currentSearchFilter.toLowerCase()) ||
                             id.toLowerCase().includes(currentSearchFilter.toLowerCase());
         const matchesTier = currentTierFilter === 'all' || data.tier === currentTierFilter;
         
-        return matchesSearch && matchesTier;
+        // Version filtering
+        const isOldItem = id.includes('_old');
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
+        const matchesVersion = useOldVersion ? 
+            (isOldItem || !equipmentDatabase[id + '_old']) :  // Old version: show old items or items without old version
+            !isOldItem;  // Current version: don't show old items
+        
+        return matchesSearch && matchesTier && matchesVersion;
     }
     
     // Filter equipment list
@@ -180,28 +216,24 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeEquipment();
     }
     
-    // Update equipment display when level changes
-    function updateEquipmentDisplay() {
-        initializeEquipment();
-        // Remove equipment that no longer meets level requirements
-        const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
-        selectedEquipment = selectedEquipment.filter(id => {
-            const eqData = equipmentDatabase[id];
-            const meetsLevelReq = (eqData.level_req || 0) <= playerLevel;
-            if (!meetsLevelReq) {
-                const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
-                if (element) element.classList.remove('selected');
-            }
-            return meetsLevelReq;
-        });
-        updateSelectedEquipmentDisplay();
-        addPointLimits();
-        updatePoints();
-        calculateDamage();
-    }
-    
-    // Toggle equipment selection
+    // Toggle equipment selection with version compatibility check
     function toggleEquipmentSelection(id) {
+        const eqData = equipmentDatabase[id];
+        if (!eqData) return;
+        
+        // Check for version conflicts
+        const isOldItem = id.includes('_old');
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
+        
+        // Check if trying to select both old and new versions of the same item
+        const baseId = isOldItem ? id.replace('_old', '') : id;
+        const oppositeId = isOldItem ? baseId : baseId + '_old';
+        
+        if (selectedEquipment.includes(oppositeId)) {
+            alert(`Cannot select both old and new versions of ${eqData.name.replace(' (Old)', '').replace(' (New)', '')}!`);
+            return;
+        }
+        
         if (selectedEquipment.includes(id)) {
             // Deselect
             selectedEquipment = selectedEquipment.filter(eq => eq !== id);
@@ -219,6 +251,36 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
+    // Update equipment display when level changes
+    function updateEquipmentDisplay() {
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
+        const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+        
+        // Update equipment list with current version filter
+        initializeEquipment();
+        
+        // Remove equipment that no longer meets level requirements or version conflicts
+        selectedEquipment = selectedEquipment.filter(id => {
+            const eqData = equipmentDatabase[id];
+            if (!eqData) return false;
+            
+            // Check level requirement
+            const meetsLevelReq = (eqData.level_req || 0) <= playerLevel;
+            if (!meetsLevelReq) {
+                const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
+                if (element) element.classList.remove('selected');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        updateSelectedEquipmentDisplay();
+        addPointLimits();
+        updatePoints();
+        calculateDamage();
+    }
+    
     // Update selected equipment display
     function updateSelectedEquipmentDisplay() {
         const container = document.getElementById('selectedEquipment');
@@ -229,8 +291,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data) {
                 const div = document.createElement('div');
                 div.className = 'selected-item';
+                const isOldItem = id.includes('_old');
+                const oldTag = isOldItem ? '<span style="color:#dc3545; font-size:0.8em;">(OLD)</span>' : '';
                 div.innerHTML = `
-                    ${data.name}
+                    ${data.name} ${oldTag}
                     <button class="remove-item" data-id="${id}">×</button>
                 `;
                 container.appendChild(div);
@@ -254,7 +318,22 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Weapon selection
+    // Toggle game version
+    function toggleGameVersion(version) {
+        const toggleCurrent = document.getElementById('toggleCurrent');
+        const toggleOld = document.getElementById('toggleOld');
+        const useOldVersion = version === 'old';
+        
+        toggleCurrent.classList.toggle('active', !useOldVersion);
+        toggleOld.classList.toggle('active', useOldVersion);
+        
+        currentVersion = version;
+        
+        // Update equipment display and adjust selected equipment
+        updateEquipmentDisplay();
+    }
+    
+    // Weapon selection with image support
     function updateWeaponInfo() {
         const weaponSelect = document.getElementById('weaponSelect');
         const weaponInfo = document.getElementById('weaponInfo');
@@ -279,35 +358,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 stats.push(`Crit DMG: +${weapon.stats.crit_damage}%`);
             }
             
-            const damageType = weapon.type === 'staff' ? 'Magic' : 'Physical';
-            
-            let setInfo = '';
-            if (weapon.set && setIndicators[weapon.set]) {
-                const setData = setIndicators[weapon.set];
-                setInfo = `<span class="${setData.class} set-indicators">${setData.text}</span>`;
-            }
-            
-            // Add level requirement
-            const levelReq = weapon.level_req || 0;
-            let levelInfo = '';
-            if (levelReq > 0) {
-                levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
-            }
-            
-            // Furioso special info
-            let furiosoInfo = '';
-            if (selectedWeapon === 'furioso') {
-                furiosoInfo = `<br><small style="color: #4a90e2;">Updated: 3.7x total damage + bleed on 4th hit</small>`;
-            }
-            
-            weaponInfo.innerHTML = `
-                <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}${furiosoInfo}<br>
-                ${stats.join(', ')}
-            `;
-        } else {
-            weaponInfo.innerHTML = 'No weapon selected';
+        const damageType = weapon.type === 'staff' ? 'Magic' : 'Physical';
+        
+        let setInfo = '';
+        if (weapon.set && setIndicators[weapon.set]) {
+            const setData = setIndicators[weapon.set];
+            setInfo = `<span class="${setData.class} set-indicators">${setData.text}</span>`;
         }
+        
+        // Add level requirement
+        const levelReq = weapon.level_req || 0;
+        let levelInfo = '';
+        if (levelReq > 0) {
+            levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
+        }
+        
+        // Furioso special info
+        let furiosoInfo = '';
+        if (selectedWeapon === 'furioso') {
+            furiosoInfo = `<br><small style="color: #4a90e2;">Updated: 3.7x total damage + bleed on 4th hit</small>`;
+        }
+        
+        // Add weapon image
+        let imageHtml = '';
+        if (weapon.image_url && weapon.image_url.trim()) {
+            imageHtml = `
+                <div style="float: left; margin-right: 10px; margin-bottom: 5px;">
+                    <img src="${weapon.image_url.trim()}" alt="${weapon.name}" 
+                         style="max-width: 60px; max-height: 60px; object-fit: contain; border-radius: 4px; border: 1px solid #e0e0e0;"
+                         onerror="this.style.display='none'">
+                </div>
+            `;
+        }
+        
+        weaponInfo.innerHTML = `
+            <div style="overflow: hidden;">
+                ${imageHtml}
+                <div>
+                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}${furiosoInfo}<br>
+                    ${stats.join(', ')}
+                </div>
+            </div>
+        `;
+    } else {
+        weaponInfo.innerHTML = 'No weapon selected';
     }
+}
     
     // Toggle input system
     function toggleInputSystem(system) {
@@ -335,9 +431,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('remainingPoints').textContent = maxPoints - total;
         document.getElementById('maxPoints').textContent = maxPoints;
         
-        // Update title display
-        document.querySelector('#pointsSection h3').innerHTML = `Attribute Points (Level ${playerLevel}) <button class="small-btn" id="optimizeStatsBtn">Optimize Stats</button>`;
-        
         calculateDamage();
     }
     
@@ -353,11 +446,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Main damage calculation function
     function calculateDamage() {
         const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         const selectedWeapon = document.getElementById('weaponSelect').value;
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         
         const data = {
             usePointSystem: usePointSystem,
+            useOldVersion: useOldVersion,
             selectedWeapon: selectedWeapon,
             playerLevel: playerLevel,
             equipment: selectedEquipment,
@@ -468,11 +563,13 @@ document.addEventListener('DOMContentLoaded', function() {
         optimizeBtn.disabled = true;
 
         const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         const selectedWeapon = document.getElementById('weaponSelect').value;
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         
         const data = {
             usePointSystem: usePointSystem,
+            useOldVersion: useOldVersion,
             selectedWeapon: selectedWeapon,
             playerLevel: playerLevel,
             magicPotion: document.getElementById('magicPotion').checked,
@@ -526,6 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const content = document.getElementById('optimizeResultsContent');
         
         let html = `<p>Tested ${result.total_combinations_tested.toLocaleString()} combinations (${result.available_equipment_count} available equipment)</p>`;
+        html += `<p>Version: ${result.version} ${result.allows_mixed_versions ? '(Mixed versions allowed)' : ''}</p>`;
         
         const scoreLabel = {
             'final_damage': 'Final Damage',
@@ -535,9 +633,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }[result.optimization_type] || 'Score';
         
         result.top_combinations.forEach((combo, index) => {
+            // Check if this combo has old items
+            const hasOldItems = combo.equipment_ids.some(id => id.includes('_old'));
+            const versionTag = hasOldItems ? '<span style="color: #dc3545; font-size: 0.9em;">(Mixed)</span>' : '';
+            
             html += `
                 <div class="optimize-combo">
-                    <h4>#${index + 1} - ${scoreLabel}: ${combo.score.toLocaleString()}</h4>
+                    <h4>#${index + 1} - ${scoreLabel}: ${combo.score.toLocaleString()} ${versionTag}</h4>
                     <p><strong>Final Damage:</strong> ${combo.final_damage.toLocaleString()}</p>
                     <p><strong>10s Total Damage:</strong> ${combo.ten_second_total.toLocaleString()}</p>
                     <p><strong>First Hit:</strong> ${combo.first_hit.toLocaleString()}</p>
@@ -770,6 +872,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('togglePoints').addEventListener('click', () => toggleInputSystem('points'));
         document.getElementById('toggleManual').addEventListener('click', () => toggleInputSystem('manual'));
         
+        // Version toggle buttons
+        document.getElementById('toggleCurrent').addEventListener('click', () => toggleGameVersion('current'));
+        document.getElementById('toggleOld').addEventListener('click', () => toggleGameVersion('old'));
+        
         // Equipment search
         document.getElementById('equipmentSearch').addEventListener('input', filterEquipment);
         
@@ -822,7 +928,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Optimize stats button (delegated since it's dynamically created)
+        // Optimize stats button
         document.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'optimizeStatsBtn') {
                 optimizeStats();
