@@ -405,7 +405,7 @@ EQUIPMENT_DB = {
     'kitsune_gloves_old': {
         'name': 'Kitsune Gloves (Old)',
         'tier': 'III',
-        'stats': {'crit_damage': 30, 'magic': 100, 'atk_min': 100, 'atk_max': 100},  # 舊版屬性
+        'stats': {'crit_damage': 10, 'magic': 100, 'atk_min': 100, 'atk_max': 100},  # 舊版屬性
         'special_effects': {},
         'level_req': 45,
         'is_old': True,
