@@ -23,6 +23,10 @@ from data import EQUIPMENT_DB, WEAPON_DB
 
 app = Flask(__name__)
 
+# ================ 配置常數（只需要修改這裡） ================
+MAX_LEVEL = 200  # 在這裡修改最大等級
+# ========================================================
+
 # Serve static files
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -94,7 +98,7 @@ class DamageCalculator:
         return bonuses
     
     @staticmethod
-    def calculate_stats_from_points(strength, vitality, intelligence, dexterity, defense, level=190):
+    def calculate_stats_from_points(strength, vitality, intelligence, dexterity, defense, level):
         """Calculate base stats from attribute points"""
         # Cap dexterity crit contribution at 50 points
         effective_dex_crit = min(dexterity, 50) * DamageCalculator.DEX_CRIT
@@ -217,7 +221,7 @@ class DamageCalculator:
             # Get base values - either from manual input or calculated from points
             use_point_system = data.get('usePointSystem', False)
             selected_weapon = data.get('selectedWeapon', '')
-            player_level = data.get('playerLevel', 190)
+            player_level = data.get('playerLevel', MAX_LEVEL)  # 使用 MAX_LEVEL
             
             # Determine damage type based on weapon
             if selected_weapon:
@@ -724,7 +728,7 @@ def optimize_damage_advanced():
             'magicPotion': data.get('magicPotion', False),
             'attackPotion': data.get('attackPotion', False),
             'goldenApple': data.get('goldenApple', False),
-            'playerLevel': data.get('playerLevel', 190),  # Default to max level
+            'playerLevel': data.get('playerLevel', MAX_LEVEL),  # 使用 MAX_LEVEL
             'useOldVersion': data.get('useOldVersion', False)
         }
         
@@ -892,7 +896,7 @@ def optimize_stats():
     data = request.get_json()
     
     try:
-        player_level = data.get('playerLevel', 190)
+        player_level = data.get('playerLevel', MAX_LEVEL)  # 使用 MAX_LEVEL
         total_points = DamageCalculator.calculate_max_points(player_level)
         vitality = int(data.get('vitality', 0))
         selected_weapon = data.get('selectedWeapon', '')
