@@ -309,7 +309,7 @@ EQUIPMENT_DB = {
         'name': 'Evernight',
         'tier': 'IV',
         'stats': {'atk_min': 250, 'atk_max': 250, 'magic': 250},
-        'special_effects': {'burn_chance': 0.40},
+        'special_effects': {},
         'set': 'flame',
         'level_req': 100,
         'image_url': 'https://trello.com/1/cards/68a88237dcedbda58c2ccde1/attachments/68bb5d173fd32e73405c19d5/download/PerennialBloom.png '
@@ -400,30 +400,7 @@ EQUIPMENT_DB = {
     },
     
     # ==================== 舊版裝備 (KPatch1) - 只針對有改動的裝備 ====================
-    
-    # Volatile Crystal 舊版
-    'volatile_crystal_old': {
-        'name': 'Volatile Crystal (Old)',
-        'tier': 'II',
-        'stats': {'magic': 45},  # 舊版屬性
-        'special_effects': {},
-        'level_req': 5,
-        'is_old': True,
-        'image_url': 'https://trello.com/1/cards/68a865f398d22ae285b4a7e6/attachments/68a865f398d22ae285b4a822/download/VolatileGem.png'
-    },
-    
-    # Evernight 舊版 (Sunpetal Crest 舊版)
-    'evernight_old': {
-        'name': 'Evernight (Old)',
-        'tier': 'IV',
-        'stats': {'atk_min': 450, 'atk_max': 450},  # 舊版屬性：只有 ATK
-        'special_effects': {'burn_chance': 0.40},
-        'set': 'flame',
-        'level_req': 100,
-        'is_old': True,
-        'image_url': 'https://trello.com/1/cards/68a88237dcedbda58c2ccde1/attachments/68bb5d173fd32e73405c19d5/download/PerennialBloom.png'
-    },
-    
+   
     # Kitsune Gloves 舊版
     'kitsune_gloves_old': {
         'name': 'Kitsune Gloves (Old)',
@@ -433,33 +410,5 @@ EQUIPMENT_DB = {
         'level_req': 45,
         'is_old': True,
         'image_url': 'https://trello.com/1/cards/68c2cf52e9b086cb83aaa083/attachments/69037dceb8075acf01b01c96/download/Screenshot_20251030-150018~2.png'
-    },
-    
-    # Slime Crown 舊版
-    'slime_crown_old': {
-        'name': 'Slime Crown (Old)',
-        'tier': 'IV',
-        'stats': {'health': 200, 'shield': 50},  # 舊版屬性：沒有 ATK
-        'special_effects': {},
-        'level_req': 35,
-        'is_old': True,
-        'image_url': 'https://trello.com/1/cards/68594acfe81e32098ab1cbb5/attachments/6859c9b0f93fb61adbdcb1c6/download/KingSlimeCrown.png'
-    },
-    
-    # Volatile Gem 舊版
-    'volatile_gem_old': {
-        'name': 'Volatile Gem (Old)',
-        'tier': 'V',
-        'stats': {'magic': 315},
-        'special_effects': {
-            'burn_chance': 0.11,
-            'poison_chance': 0.11,
-            'dot_bonus': 0.20
-            # 舊版沒有 bleed_chance
-        },
-        'set': 'flame',
-        'level_req': 150,
-        'is_old': True,
-        'image_url': 'https://trello.com/1/cards/68594af20d38a03c0bd148c2/attachments/6859ca1779e348a39f379352/download/VolatileGem.png'
     }
 }
