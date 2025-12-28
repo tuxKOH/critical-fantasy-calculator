@@ -332,10 +332,10 @@ EQUIPMENT_DB = {
     },
     'kitsune_gloves': {  # KPatch2 更新：屬性提升，階級和等級提高
         'name': 'Kitsune Gloves',
-        'tier': 'IV',
+        'tier': 'III',
         'stats': {'crit_damage': 50, 'magic': 125, 'atk_min': 125, 'atk_max': 125},
         'special_effects': {},
-        'level_req': 65,
+        'level_req': 45,
         'image_url': 'https://trello.com/1/cards/68c2cf52e9b086cb83aaa083/attachments/69037dceb8075acf01b01c96/download/Screenshot_20251030-150018~2.png '
     },
     'slime_crown': {  # KPatch2 更新：HP 200→1125，增加 200 ATK
