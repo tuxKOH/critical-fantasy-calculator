@@ -309,7 +309,7 @@ EQUIPMENT_DB = {
         'name': 'Evernight',
         'tier': 'IV',
         'stats': {'atk_min': 250, 'atk_max': 250, 'magic': 250},
-        'special_effects': {},
+        'special_effects': {'burn_chance': 0.25},
         'set': 'flame',
         'level_req': 100,
         'image_url': 'https://trello.com/1/cards/68a88237dcedbda58c2ccde1/attachments/68bb5d173fd32e73405c19d5/download/PerennialBloom.png '
