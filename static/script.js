@@ -494,12 +494,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update results display
                 document.getElementById('resultBaseDamage').textContent = result.base_damage.toLocaleString();
-                document.getElementById('resultCrit').textContent = result.crit_multiplied_damage.toLocaleString();
                 document.getElementById('resultDot').textContent = result.dot_damage.toLocaleString();
                 document.getElementById('resultFinal').textContent = result.final_damage.toLocaleString();
+                
+                // 使用 damage_after_crit 而不是 crit_multiplied_damage
+                document.getElementById('resultDamageAfterCrit').textContent = result.damage_after_crit.toLocaleString();
+                
                 document.getElementById('resultMultiplier').textContent = result.effective_multiplier + 'x';
-                document.getElementById('resultCritRate').textContent = result.crit_rate.toLocaleString() + '%';
-                document.getElementById('resultCritDamage').textContent = result.crit_damage.toLocaleString() + '%';
                 document.getElementById('resultDamageType').textContent = result.damage_type === 'magic' ? 'Magic' : 'Physical';
                 
                 // Update ten second damage display
@@ -792,6 +793,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="detail-item">
                     <span>Crit Base Damage:</span>
                     <span>${details.crit_calculation.crit_base_damage.toLocaleString()}</span>
+                </div>
+                <div class="detail-item">
+                    <span>Expected Damage:</span>
+                    <span>${details.crit_calculation.expected_damage.toLocaleString()}</span>
+                </div>
+                <div class="detail-item">
+                    <span>Damage After Crit:</span>
+                    <span>${details.crit_calculation.damage_after_crit.toLocaleString()}</span>
                 </div>
             </div>
             
