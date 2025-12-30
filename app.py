@@ -114,11 +114,11 @@ class DamageCalculator:
         }
     
     @staticmethod
-    def calculate_ten_second_damage(base_damage, dot_damage, weapon_type, crit_multiplied_damage):
+    def calculate_ten_second_damage(base_damage, dot_damage, weapon_type, expected_damage):
         """Calculate damage for 10 seconds based on weapon type and class mechanics"""
         
         # Base damage per hit (without DoT)
-        base_damage_per_hit = crit_multiplied_damage
+        base_damage_per_hit = expected_damage
         dot_damage_per_hit = dot_damage
         
         if weapon_type == 'staff':  # Flow (Mage)
@@ -230,7 +230,20 @@ class DamageCalculator:
             else:
                 damage_type = 'attack'  # Default to attack if no weapon selected
             
+            # Track set bonuses
+            set_counts = {
+                'flame': 0,
+                'wolf_howl': 0,
+                'crimson': 0,
+                'queen_bee': 0,
+                'explorer': 0,
+                'forest_dweller': 0,
+                'library_ruina': 0,
+                'blessing': 0
+            }
+            
             if use_point_system:
+                # ============ 點數系統模式 ============
                 # Calculate stats from attribute points
                 strength = int(data.get('strength', 0))
                 vitality = int(data.get('vitality', 0))
@@ -247,44 +260,43 @@ class DamageCalculator:
                 magic_damage = base_stats['magic_damage']
                 base_crit_rate = base_stats['crit_chance']
                 base_crit_damage = base_stats['crit_damage']
+                
+                # 點數模式：應用武器屬性
+                if selected_weapon:
+                    weapon_data = WEAPON_DB.get(selected_weapon, {})
+                    weapon_bonus = DamageCalculator.calculate_equipment_bonus(weapon_data)
+                    
+                    min_damage += weapon_bonus['atk_min']
+                    max_damage += weapon_bonus['atk_max']
+                    magic_damage += weapon_bonus['magic']
+                    base_crit_rate += weapon_bonus['crit_chance']
+                    base_crit_damage += weapon_bonus['crit_damage']
+                    
+                    # Count weapon set piece
+                    if weapon_data.get('set'):
+                        set_counts[weapon_data['set']] += 1
+                
+                # Calculate average physical damage
+                avg_physical_damage = (min_damage + max_damage) / 2
+                
             else:
-                # Use manual input
+                # ============ 手動輸入模式 ============
+                # 使用用戶輸入的值作為基礎
                 min_damage = float(data.get('minDamage', 0)) or DamageCalculator.BASE_MIN_ATK
                 max_damage = float(data.get('maxDamage', 0)) or DamageCalculator.BASE_MAX_ATK
                 magic_damage = float(data.get('magicDamage', 0)) or DamageCalculator.BASE_MAGIC
                 base_crit_rate = float(data.get('critRate', DamageCalculator.BASE_CRIT_RATE))
                 base_crit_damage = float(data.get('critDamage', DamageCalculator.BASE_CRIT_DAMAGE))
-            
-            # Track set bonuses (FIXED: include weapon sets)
-            set_counts = {
-                'flame': 0,
-                'wolf_howl': 0,
-                'crimson': 0,
-                'queen_bee': 0,
-                'explorer': 0,
-                'forest_dweller': 0,
-                'library_ruina': 0,
-                'blessing': 0
-            }
-            
-            # Apply weapon stats if weapon is selected and count weapon set
-            if selected_weapon:
-                weapon_data = WEAPON_DB.get(selected_weapon, {})
-                weapon_bonus = DamageCalculator.calculate_equipment_bonus(weapon_data)
                 
-                min_damage += weapon_bonus['atk_min']
-                max_damage += weapon_bonus['atk_max']
-                magic_damage += weapon_bonus['magic']
-                # Apply weapon crit stats
-                base_crit_rate += weapon_bonus['crit_chance']
-                base_crit_damage += weapon_bonus['crit_damage']
+                # 手動輸入模式：不應用武器基礎屬性，只統計套裝
+                if selected_weapon:
+                    weapon_data = WEAPON_DB.get(selected_weapon, {})
+                    # 不應用武器屬性，只統計套裝
+                    if weapon_data.get('set'):
+                        set_counts[weapon_data['set']] += 1
                 
-                # Count weapon set piece (FIXED: add weapon to set count)
-                if weapon_data.get('set'):
-                    set_counts[weapon_data['set']] += 1
-            
-            # Calculate average physical damage
-            avg_physical_damage = (min_damage + max_damage) / 2
+                # Calculate average physical damage (based on manual input)
+                avg_physical_damage = (min_damage + max_damage) / 2
             
             # Get potion effects
             has_magic_potion = data.get('magicPotion', False)
@@ -294,30 +306,34 @@ class DamageCalculator:
             # Get selected equipment
             equipment = data.get('equipment', [])
             
-            # Apply equipment stat bonuses and calculate total crit rate
+            # 初始化總爆擊率/傷害
             total_crit_rate = base_crit_rate
             total_crit_damage = base_crit_damage
             
-            # Apply equipment stats and count set pieces
+            # 處理裝備效果
             for eq in equipment:
                 eq_data = EQUIPMENT_DB.get(eq, {})
-                eq_bonus = DamageCalculator.calculate_equipment_bonus(eq_data)
                 
-                # Apply stat bonuses to BASE stats (so they get multiplied by potions)
-                min_damage += eq_bonus['atk_min']
-                max_damage += eq_bonus['atk_max']
-                magic_damage += eq_bonus['magic']
-                total_crit_rate += eq_bonus['crit_chance']
-                total_crit_damage += eq_bonus['crit_damage']
+                if use_point_system:
+                    # 點數模式：應用裝備的所有屬性加成
+                    eq_bonus = DamageCalculator.calculate_equipment_bonus(eq_data)
+                    
+                    min_damage += eq_bonus['atk_min']
+                    max_damage += eq_bonus['atk_max']
+                    magic_damage += eq_bonus['magic']
+                    total_crit_rate += eq_bonus['crit_chance']
+                    total_crit_damage += eq_bonus['crit_damage']
+                # 手動輸入模式：不應用基礎屬性加成
                 
-                # Count set pieces
+                # 兩種模式都統計套裝數量
                 if eq_data.get('set'):
                     set_counts[eq_data['set']] += 1
             
-            # Recalculate average physical damage after equipment bonuses
-            avg_physical_damage = (min_damage + max_damage) / 2
+            # 重新計算平均物理傷害（點數模式需要，手動模式已經有了）
+            if use_point_system:
+                avg_physical_damage = (min_damage + max_damage) / 2
             
-            # Apply potion effects to base stats (after equipment bonuses)
+            # 應用藥水效果
             effective_min_damage = min_damage
             effective_max_damage = max_damage
             effective_avg_physical_damage = avg_physical_damage
@@ -386,27 +402,35 @@ class DamageCalculator:
             crit_rate = min(total_crit_rate / 100, 1.0)  # Cap at 100%
             crit_damage_multiplier = 1 + (total_crit_damage / 100)  # 100% crit damage = 2x multiplier
             
-            # Calculate expected damage with crit
+            # Calculate expected damage with crit (期望傷害)
             # Non-crit damage uses base_damage, crit damage uses crit_base_damage * crit_damage_multiplier
             expected_non_crit_damage = base_damage * (1 - crit_rate)
             expected_crit_damage = crit_base_damage * crit_damage_multiplier * crit_rate
-            total_damage = expected_non_crit_damage + expected_crit_damage
+            expected_damage = expected_non_crit_damage + expected_crit_damage  # 這是期望傷害
+
+            # Calculate damage assuming 100% crit (假設100%爆擊的傷害)
+            damage_after_crit = crit_base_damage * crit_damage_multiplier
+            
+            # Apply equipment effects to expected damage (兩種模式都生效)
+            total_damage = expected_damage  # 使用期望傷害作為基礎
             
             # Apply equipment effects
             dot_damage = 0
             has_cursed_spellbook = 'cursed_spellbook' in equipment
             has_dual_sword = 'dual_sword' in equipment
             
-            # Cursed Spellbook effect
+            # Cursed Spellbook effect (兩種模式都生效)
             if has_cursed_spellbook:
-                total_damage *= 1.3
+                total_damage *= 1.30
+                damage_after_crit *= 1.30  # 也需要對 damage_after_crit 應用
             
-            # Dual Sword effect
+            # Dual Sword effect (兩種模式都生效)
             if has_dual_sword:
                 dual_sword_multiplier = 1 + (0.15 * (2 - 1))
                 total_damage *= dual_sword_multiplier
+                damage_after_crit *= dual_sword_multiplier  # 也需要對 damage_after_crit 應用
             
-            # Calculate DOT damage (unaffected by crit or equipment multipliers)
+            # Calculate DOT damage (兩種模式都生效)
             flame_set_count = set_counts['flame']
             burn_chance = 0
             bleed_chance = 0
@@ -438,13 +462,13 @@ class DamageCalculator:
                         poison_chance += special_effects.get('poison_chance', 0.11)
                         has_volatile_gem = True
             
-            # Apply flame set bonus
+            # Apply flame set bonus (兩種模式都生效)
             if flame_set_count >= 2:
                 burn_chance += 0.10
                 set_bonus_applied['flame'] = True
                 print(f"Flame Set Bonus Applied: +10% burn chance (Count: {flame_set_count})")
             
-            # Queenbee Crown (bleeding)
+            # Queenbee Crown (bleeding) - 兩種模式都生效
             if 'queenbee_crown' in equipment or 'queenbee_crown_old' in equipment:
                 eq_id = 'queenbee_crown_old' if 'queenbee_crown_old' in equipment else 'queenbee_crown'
                 eq_data = EQUIPMENT_DB.get(eq_id, {})
@@ -478,7 +502,7 @@ class DamageCalculator:
                 blood_damage = effective_min_damage * 0.05 * 9
                 dot_damage += blood_damage
             
-            # Total final damage
+            # Total final damage (包含DoT)
             final_damage = total_damage + dot_damage
             
             # Calculate ten second damage
@@ -514,7 +538,9 @@ class DamageCalculator:
                     'crit_damage_multiplier': crit_damage_multiplier,
                     'crit_base_damage': crit_base_damage,
                     'expected_non_crit_damage': expected_non_crit_damage,
-                    'expected_crit_damage': expected_crit_damage
+                    'expected_crit_damage': expected_crit_damage,
+                    'expected_damage': expected_damage,
+                    'damage_after_crit': damage_after_crit
                 },
                 'dot_calculation': {
                     'burn_chance': burn_chance,
@@ -528,6 +554,7 @@ class DamageCalculator:
             
             result = {
                 'success': True,
+                'use_point_system': use_point_system,  # 新增字段，標記使用的模式
                 'min_damage': round(min_damage, 2),
                 'max_damage': round(max_damage, 2),
                 'magic_damage': round(magic_damage, 2),
@@ -537,7 +564,9 @@ class DamageCalculator:
                 'effective_avg_physical_damage': round(effective_avg_physical_damage, 2),
                 'effective_magic_damage': round(effective_magic_damage, 2),
                 'base_damage': round(base_damage, 2),
-                'crit_multiplied_damage': round(total_damage, 2),
+                'expected_damage': round(expected_damage, 2),  # 新增：期望傷害
+                'damage_after_crit': round(damage_after_crit, 2),  # 新增：100%爆擊傷害
+                'crit_multiplied_damage': round(total_damage, 2),  # 保持舊名稱兼容
                 'dot_damage': round(dot_damage, 2),
                 'final_damage': round(final_damage, 2),
                 'effective_multiplier': round(final_damage / base_damage, 2) if base_damage > 0 else 0,
