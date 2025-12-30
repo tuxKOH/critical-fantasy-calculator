@@ -1,4 +1,4 @@
-# critical-fantasy-calculator (2.1.2)
+# critical-fantasy-calculator (2.2.0)
 the caculatorrorrrjxhisjs
 ## License
 
