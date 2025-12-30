@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <!--
 Critical Fantasy Damage Calculator
@@ -251,10 +250,6 @@ Copyright (C) 2024  @tux_koh
                                 <span class="result-value" id="resultBaseDamage">0</span>
                             </div>
                             <div class="result-item">
-                                <span class="result-label">Crit Multiplied:</span>
-                                <span class="result-value" id="resultCrit">0</span>
-                            </div>
-                            <div class="result-item">
                                 <span class="result-label">DoT Damage:</span>
                                 <span class="result-value" id="resultDot">0</span>
                             </div>
@@ -268,23 +263,20 @@ Copyright (C) 2024  @tux_koh
                                 <span class="result-label result-highlight">Final Damage:</span>
                                 <span class="result-value result-highlight" id="resultFinal">0</span>
                             </div>
+                            <!-- 新增 Damage After Crit -->
+                            <div class="result-item">
+                                <span class="result-label">Damage After Crit:</span>
+                                <span class="result-value" id="resultDamageAfterCrit">0</span>
+                            </div>
                             <div class="result-item">
                                 <span class="result-label">Multiplier:</span>
                                 <span class="result-value" id="resultMultiplier">0x</span>
-                            </div>
-                            <div class="result-item">
-                                <span class="result-label">Crit Rate:</span>
-                                <span class="result-value" id="resultCritRate">0%</span>
                             </div>
                             <div class="result-item">
                                 <span class="result-label">Attack Mechanic:</span>
                                 <span class="result-value" id="resultMechanic">Default</span>
                             </div>
                         </div>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">Crit Damage:</span>
-                        <span class="result-value" id="resultCritDamage">0%</span>
                     </div>
                     <div class="result-item">
                         <span class="result-label">Damage Type:</span>
@@ -324,7 +316,6 @@ Copyright (C) 2024  @tux_koh
             <p><a href="https://www.roblox.com/game-pass/1540670718/donation" target="_blank">donate me 10 bobux :D</a></p>
         </div>
     </div>
-
     <!-- Extra Data Modal -->
     <div id="extraDataModal" class="modal">
         <div class="modal-content">
