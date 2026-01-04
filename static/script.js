@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set up event listeners
         setupEventListeners();
         
-        // Initialize points
+        // Initialize points (移除防禦點數)
         updatePoints();
         
         // Update weapon info
@@ -415,16 +415,15 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Update points calculation
+    // Update points calculation (移除防禦點數)
     function updatePoints() {
         const strength = parseInt(document.getElementById('strength').value) || 0;
         const vitality = parseInt(document.getElementById('vitality').value) || 0;
         const intelligence = parseInt(document.getElementById('intelligence').value) || 0;
         const dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-        const defense = parseInt(document.getElementById('defense').value) || 0;
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         
-        const total = strength + vitality + intelligence + dexterity + defense;
+        const total = strength + vitality + intelligence + dexterity;  // 移除防禦點數
         const maxPoints = playerLevel * 2;
         
         document.getElementById('totalPoints').textContent = total;
@@ -449,12 +448,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         const selectedWeapon = document.getElementById('weaponSelect').value;
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+        const classLevel = parseInt(document.getElementById('classLevel').value) || 15;
         
         const data = {
             usePointSystem: usePointSystem,
             useOldVersion: useOldVersion,
             selectedWeapon: selectedWeapon,
             playerLevel: playerLevel,
+            classLevel: classLevel,
             equipment: selectedEquipment,
             magicPotion: document.getElementById('magicPotion').checked,
             attackPotion: document.getElementById('attackPotion').checked,
@@ -466,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data.vitality = parseInt(document.getElementById('vitality').value) || 0;
             data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
             data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-            data.defense = parseInt(document.getElementById('defense').value) || 0;
+            data.defense = 0;  // 防禦點數設為0
         } else {
             data.minDamage = document.getElementById('minDamage').value;
             data.maxDamage = document.getElementById('maxDamage').value;
@@ -492,6 +493,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 currentResult = result;
                 
+                // Update class level badge
+                const classLevelBadge = document.getElementById('classLevelBadge');
+                if (result.class_level && result.class_multiplier) {
+                    classLevelBadge.textContent = `Class: ${result.class_multiplier}x`;
+                    classLevelBadge.style.display = 'inline-block';
+                } else {
+                    classLevelBadge.style.display = 'none';
+                }
+                
                 // Update results display
                 document.getElementById('resultBaseDamage').textContent = result.base_damage.toLocaleString();
                 document.getElementById('resultDot').textContent = result.dot_damage.toLocaleString();
@@ -513,18 +523,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.calculated_stats && result.player_stats) {
                     document.getElementById('playerStatsSection').style.display = 'block';
                     
+                    let dotStatsHtml = '';
+                    if (result.burn_chance > 0 || result.bleed_chance > 0 || result.poison_chance > 0 || result.has_blood_butcher) {
+                        dotStatsHtml = `
+                            <div class="result-item">
+                                <span class="result-label">DoT Attributes:</span>
+                                <span class="result-value">
+                                    ${result.burn_chance > 0 ? `Burn: ${result.burn_chance}%` : ''}
+                                    ${result.bleed_chance > 0 ? `Bleed: ${result.bleed_chance}%` : ''}
+                                    ${result.poison_chance > 0 ? `Poison: ${result.poison_chance}%` : ''}
+                                    ${result.has_blood_butcher ? 'Blood Butcher' : ''}
+                                </span>
+                            </div>
+                        `;
+                    }
+                    
                     document.getElementById('playerStatsContent').innerHTML = `
                         <div class="result-item">
-                            <span class="result-label">Health:</span>
-                            <span class="result-value">${result.player_stats.health.toLocaleString()}</span>
+                            <span class="result-label">HP:</span>
+                            <span class="result-value">${(result.player_stats.health || 0).toLocaleString()}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Shield:</span>
-                            <span class="result-value">${result.player_stats.shield.toLocaleString()}</span>
+                            <span class="result-value">${(result.player_stats.shield || 0).toLocaleString()}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Total HP:</span>
-                            <span class="result-value">${result.player_stats.total_hp.toLocaleString()}</span>
+                            <span class="result-value">${(result.player_stats.total_hp || 0).toLocaleString()}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Attack Range:</span>
@@ -542,6 +567,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="result-label">Crit Damage:</span>
                             <span class="result-value">${result.crit_damage.toLocaleString()}%</span>
                         </div>
+                        <div class="result-item">
+                            <span class="result-label">Class Level:</span>
+                            <span class="result-value">${result.class_level} (${result.class_multiplier}x)</span>
+                        </div>
+                        ${dotStatsHtml}
                     `;
                 } else {
                     document.getElementById('playerStatsSection').style.display = 'none';
@@ -567,12 +597,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         const selectedWeapon = document.getElementById('weaponSelect').value;
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+        const classLevel = parseInt(document.getElementById('classLevel').value) || 15;
         
         const data = {
             usePointSystem: usePointSystem,
             useOldVersion: useOldVersion,
             selectedWeapon: selectedWeapon,
             playerLevel: playerLevel,
+            classLevel: classLevel,
             magicPotion: document.getElementById('magicPotion').checked,
             attackPotion: document.getElementById('attackPotion').checked,
             goldenApple: document.getElementById('goldenApple').checked,
@@ -584,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data.vitality = parseInt(document.getElementById('vitality').value) || 0;
             data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
             data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-            data.defense = parseInt(document.getElementById('defense').value) || 0;
+            data.defense = 0;  // 防禦點數設為0
         } else {
             data.minDamage = document.getElementById('minDamage').value;
             data.maxDamage = document.getElementById('maxDamage').value;
@@ -618,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Display optimization results
+    // Display optimization results (移除First Hit顯示)
     function displayOptimizationResults(result) {
         const section = document.getElementById('optimizeResultSection');
         const content = document.getElementById('optimizeResultsContent');
@@ -629,7 +661,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const scoreLabel = {
             'final_damage': 'Final Damage',
             'ten_second': '10s Total Damage', 
-            'first_hit': 'First Hit',
             'dot': 'DoT Damage'
         }[result.optimization_type] || 'Score';
         
@@ -643,7 +674,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <h4>#${index + 1} - ${scoreLabel}: ${combo.score.toLocaleString()} ${versionTag}</h4>
                     <p><strong>Final Damage:</strong> ${combo.final_damage.toLocaleString()}</p>
                     <p><strong>10s Total Damage:</strong> ${combo.ten_second_total.toLocaleString()}</p>
-                    <p><strong>First Hit:</strong> ${combo.first_hit.toLocaleString()}</p>
                     <p><strong>DoT Damage:</strong> ${combo.dot_damage.toLocaleString()}</p>
                     <p><strong>Equipment:</strong> ${combo.equipment_names.join(', ')}</p>
                     <p><strong>Crit:</strong> ${combo.crit_rate}% rate, ${combo.crit_damage}% damage</p>
@@ -726,12 +756,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('strength').value = recommendation.strength;
         document.getElementById('intelligence').value = recommendation.intelligence;
         document.getElementById('dexterity').value = recommendation.dexterity;
-        document.getElementById('defense').value = recommendation.defense;
         
         updatePoints();
         calculateDamage();
         
-        alert(`Optimized stats applied!\n${recommendation.reason}\n\nStrength: ${recommendation.strength}\nIntelligence: ${recommendation.intelligence}\nDexterity: ${recommendation.dexterity}\nDefense: ${recommendation.defense}\n\nTotal Used: ${recommendation.total_used}/${playerLevel * 2}`);
+        alert(`Optimized stats applied!\n${recommendation.reason}\n\nStrength: ${recommendation.strength}\nIntelligence: ${recommendation.intelligence}\nDexterity: ${recommendation.dexterity}\n\nTotal Used: ${recommendation.total_used}/${playerLevel * 2}`);
     }
     
     // Show extra data modal
@@ -744,6 +773,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const details = currentResult.calculation_details;
         
         let html = `
+            <div class="detail-section">
+                <h4>Class Level</h4>
+                <div class="detail-item">
+                    <span>Level:</span>
+                    <span>${currentResult.class_level}</span>
+                </div>
+                <div class="detail-item">
+                    <span>Multiplier:</span>
+                    <span>${currentResult.class_multiplier}x</span>
+                </div>
+            </div>
+            
             <div class="detail-section">
                 <h4>Base Stats</h4>
                 <div class="detail-item">
@@ -827,15 +868,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     <h4>DoT Calculations</h4>
                     <div class="detail-item">
                         <span>Burn Chance:</span>
-                        <span>${(details.dot_calculation.burn_chance * 100).toFixed(1)}%</span>
+                        <span>${(details.dot_calculation.burn_chance || 0).toFixed(1)}%</span>
                     </div>
                     <div class="detail-item">
                         <span>Bleed Chance:</span>
-                        <span>${(details.dot_calculation.bleed_chance * 100).toFixed(1)}%</span>
+                        <span>${(details.dot_calculation.bleed_chance || 0).toFixed(1)}%</span>
                     </div>
                     <div class="detail-item">
                         <span>Poison Chance:</span>
-                        <span>${(details.dot_calculation.poison_chance * 100).toFixed(1)}%</span>
+                        <span>${(details.dot_calculation.poison_chance || 0).toFixed(1)}%</span>
+                    </div>
+                    <div class="detail-item">
+                        <span>Blood Butcher:</span>
+                        <span>${details.dot_calculation.has_blood_butcher ? '✓ Active' : 'Not Active'}</span>
                     </div>
                 </div>
             `;
@@ -850,17 +895,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('extraDataModal').style.display = 'none';
     }
     
-    // Add point limits to input fields
+    // Add point limits to input fields (移除防禦點數限制)
     function addPointLimits() {
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         const maxPoints = playerLevel * 2;
         
-        // Set input field maximum values
+        // Set input field maximum values (移除防禦點數)
         document.getElementById('strength').max = maxPoints;
         document.getElementById('vitality').max = maxPoints;
         document.getElementById('intelligence').max = maxPoints;
         document.getElementById('dexterity').max = 50; // DEX still capped at 50
-        document.getElementById('defense').max = maxPoints;
     }
 
     // Setup event listeners
@@ -890,8 +934,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Tier filters
         document.querySelectorAll('.tier-filter').forEach((btn, index) => {
+            const tiers = ['all', 'I', 'II', 'III', 'IV', 'V'];
             btn.addEventListener('click', function() {
-                const tiers = ['all', 'I', 'II', 'III', 'IV', 'V'];
                 filterByTier(tiers[index]);
             });
         });
@@ -902,14 +946,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Player level change
         document.getElementById('playerLevel').addEventListener('change', updateEquipmentDisplay);
         
-        // Attribute points changes
-        ['strength', 'vitality', 'intelligence', 'dexterity', 'defense'].forEach(id => {
-            document.getElementById(id)?.addEventListener('input', updatePoints);
+        // Class level change
+        document.getElementById('classLevel').addEventListener('change', calculateDamage);
+        
+        // Attribute points changes (移除防禦點數)
+        ['strength', 'vitality', 'intelligence', 'dexterity'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', updatePoints);
+            }
         });
         
         // Potion toggles
         ['magicPotion', 'attackPotion', 'goldenApple'].forEach(id => {
-            document.getElementById(id)?.addEventListener('change', calculateDamage);
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', calculateDamage);
+            }
         });
         
         // Manual stat inputs
@@ -920,29 +973,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Optimization filters (delegated event listener)
-        document.querySelector('.optimization-filters').addEventListener('click', function(e) {
-            if (e.target.classList.contains('filter-btn')) {
-                const type = e.target.textContent.includes('Final') ? 'final_damage' :
-                            e.target.textContent.includes('10s') ? 'ten_second' :
-                            e.target.textContent.includes('First') ? 'first_hit' : 'dot';
-                
-                setOptimizationType(type);
-                
-                // Update active class
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                e.target.classList.add('active');
-            }
-        });
+        // Optimization filters (delegated event listener) - 移除First Hit
+        const optimizationFilters = document.querySelector('.optimization-filters');
+        if (optimizationFilters) {
+            optimizationFilters.addEventListener('click', function(e) {
+                if (e.target.classList.contains('filter-btn')) {
+                    const type = e.target.textContent.includes('Final') ? 'final_damage' :
+                                e.target.textContent.includes('10s') ? 'ten_second' : 'dot';
+                    
+                    currentOptimizationType = type;
+                    
+                    // Update active class
+                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    e.target.classList.add('active');
+                }
+            });
+        }
         
         // Optimize stats button
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.id === 'optimizeStatsBtn') {
-                optimizeStats();
-            }
-        });
+        const optimizeStatsBtn = document.getElementById('optimizeStatsBtn');
+        if (optimizeStatsBtn) {
+            optimizeStatsBtn.addEventListener('click', optimizeStats);
+        }
         
         // Close modal when clicking outside
         window.addEventListener('click', function(event) {
