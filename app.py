@@ -37,7 +37,8 @@ class DamageCalculator:
     STR_DMG_MIN = 2.96
     STR_DMG_MAX = 6.45
     INT_MAGIC = 8.0
-    VIT_HP = 35
+    VIT_HP = 75  # 修改：一點VIT加75HP（原為35）
+    BASE_HP = 100  # 修改：初始100HP
     DEF_SHIELD = 17
     DEX_CRIT = 0.8
     BASE_CRIT_RATE = 1.0  # Base 1% crit rate
@@ -48,6 +49,21 @@ class DamageCalculator:
     BASE_MIN_ATK = 8
     BASE_MAX_ATK = 15
     BASE_MAGIC = 10
+    
+    # Class level constants
+    MAX_CLASS_LEVEL = 15
+    CLASS_LEVEL_MULTIPLIER_PER_LEVEL = 0.02
+    BASE_CLASS_LEVEL_MULTIPLIER = 1.0
+    
+    @staticmethod
+    def calculate_class_multiplier(class_level):
+        """Calculate damage multiplier from class level"""
+        if class_level < 1:
+            return DamageCalculator.BASE_CLASS_LEVEL_MULTIPLIER + DamageCalculator.CLASS_LEVEL_MULTIPLIER_PER_LEVEL  # 1級 = 1.02x
+        
+        # 每級增加 0.02，最低1級 = 1.02x，滿級 15 級 = 1.0 + 15 * 0.02 = 1.3x
+        effective_level = max(1, min(class_level, DamageCalculator.MAX_CLASS_LEVEL))
+        return DamageCalculator.BASE_CLASS_LEVEL_MULTIPLIER + (effective_level * DamageCalculator.CLASS_LEVEL_MULTIPLIER_PER_LEVEL)
     
     @staticmethod
     def calculate_max_points(level):
@@ -91,7 +107,7 @@ class DamageCalculator:
         if 'crit_damage' in stats:
             bonuses['crit_damage'] = stats['crit_damage']
         if 'health' in stats:
-            bonuses['health'] = stats['health']
+            bonuses['health'] = stats['health']  # 裝備生命值直接加入
         if 'shield' in stats:
             bonuses['shield'] = stats['shield']
             
@@ -106,7 +122,7 @@ class DamageCalculator:
         return {
             'min_damage': strength * DamageCalculator.STR_DMG_MIN + DamageCalculator.BASE_MIN_ATK,
             'max_damage': strength * DamageCalculator.STR_DMG_MAX + DamageCalculator.BASE_MAX_ATK,
-            'health': vitality * DamageCalculator.VIT_HP,
+            'health': DamageCalculator.BASE_HP + vitality * DamageCalculator.VIT_HP,  # 基礎100HP + VIT加成
             'magic_damage': intelligence * DamageCalculator.INT_MAGIC + DamageCalculator.BASE_MAGIC,
             'crit_chance': DamageCalculator.BASE_CRIT_RATE + effective_dex_crit,
             'crit_damage': DamageCalculator.BASE_CRIT_DAMAGE,
@@ -218,6 +234,10 @@ class DamageCalculator:
             # 獲取版本設置
             use_old_version = data.get('useOldVersion', False)
             
+            # 獲取 class level (默認滿級 15)
+            class_level = int(data.get('classLevel', 15))
+            class_multiplier = DamageCalculator.calculate_class_multiplier(class_level)
+            
             # Get base values - either from manual input or calculated from points
             use_point_system = data.get('usePointSystem', False)
             selected_weapon = data.get('selectedWeapon', '')
@@ -242,6 +262,9 @@ class DamageCalculator:
                 'blessing': 0
             }
             
+            # 初始化裝備生命值加成
+            equipment_health_bonus = 0
+            
             if use_point_system:
                 # ============ 點數系統模式 ============
                 # Calculate stats from attribute points
@@ -249,7 +272,7 @@ class DamageCalculator:
                 vitality = int(data.get('vitality', 0))
                 intelligence = int(data.get('intelligence', 0))
                 dexterity = int(data.get('dexterity', 0))
-                defense = int(data.get('defense', 0))
+                defense = int(data.get('defense', 0))  # 防禦點數仍然存在，但不在UI中顯示
                 
                 base_stats = DamageCalculator.calculate_stats_from_points(
                     strength, vitality, intelligence, dexterity, defense, player_level
@@ -260,6 +283,8 @@ class DamageCalculator:
                 magic_damage = base_stats['magic_damage']
                 base_crit_rate = base_stats['crit_chance']
                 base_crit_damage = base_stats['crit_damage']
+                base_health = base_stats['health']  # 基礎生命值（已包含基礎100HP）
+                base_shield = base_stats['shield']  # 基礎護盾值
                 
                 # 點數模式：應用武器屬性
                 if selected_weapon:
@@ -271,6 +296,7 @@ class DamageCalculator:
                     magic_damage += weapon_bonus['magic']
                     base_crit_rate += weapon_bonus['crit_chance']
                     base_crit_damage += weapon_bonus['crit_damage']
+                    equipment_health_bonus += weapon_bonus['health']  # 武器生命加成
                     
                     # Count weapon set piece
                     if weapon_data.get('set'):
@@ -287,6 +313,8 @@ class DamageCalculator:
                 magic_damage = float(data.get('magicDamage', 0)) or DamageCalculator.BASE_MAGIC
                 base_crit_rate = float(data.get('critRate', DamageCalculator.BASE_CRIT_RATE))
                 base_crit_damage = float(data.get('critDamage', DamageCalculator.BASE_CRIT_DAMAGE))
+                base_health = 0  # 手動模式沒有基礎生命值
+                base_shield = 0  # 手動模式沒有基礎護盾值
                 
                 # 手動輸入模式：不應用武器基礎屬性，只統計套裝
                 if selected_weapon:
@@ -323,6 +351,7 @@ class DamageCalculator:
                     magic_damage += eq_bonus['magic']
                     total_crit_rate += eq_bonus['crit_chance']
                     total_crit_damage += eq_bonus['crit_damage']
+                    equipment_health_bonus += eq_bonus['health']  # 累加裝備生命值加成
                 # 手動輸入模式：不應用基礎屬性加成
                 
                 # 兩種模式都統計套裝數量
@@ -411,8 +440,12 @@ class DamageCalculator:
             # Calculate damage assuming 100% crit (假設100%爆擊的傷害)
             damage_after_crit = crit_base_damage * crit_damage_multiplier
             
+            # 應用 class level 加成
+            total_damage = expected_damage * class_multiplier  # 應用 class level 加成
+            damage_after_crit = damage_after_crit * class_multiplier  # 也應用 class level 加成
+            
             # Apply equipment effects to expected damage (兩種模式都生效)
-            total_damage = expected_damage  # 使用期望傷害作為基礎
+            # 注意：現在 total_damage 已經包含了 class level 加成
             
             # Apply equipment effects
             dot_damage = 0
@@ -479,6 +512,11 @@ class DamageCalculator:
             if 'volatile_gem' in equipment and not use_old_version:
                 bleed_chance += 0.10
             
+            # 計算DoT機率（最終值）
+            final_burn_chance = min(burn_chance, 1) * 100
+            final_bleed_chance = min(bleed_chance, 1) * 100
+            final_poison_chance = min(poison_chance, 1) * 100
+            
             # Calculate burn damage (uses potion-boosted magic damage)
             if burn_chance > 0:
                 burn_damage = effective_magic_damage * 0.33 * 5
@@ -498,7 +536,8 @@ class DamageCalculator:
                 dot_damage += poison_damage * min(poison_chance, 1)
             
             # Blood Butcher - uses potion-boosted min physical damage
-            if 'blood_butcher' in equipment or 'blood_butcher_old' in equipment:
+            has_blood_butcher = 'blood_butcher' in equipment or 'blood_butcher_old' in equipment
+            if has_blood_butcher:
                 blood_damage = effective_min_damage * 0.05 * 9
                 dot_damage += blood_damage
             
@@ -511,8 +550,29 @@ class DamageCalculator:
                 base_damage, dot_damage, weapon_type, total_damage
             )
             
+            # 計算總生命值（點數模式才計算）
+            total_health = 0
+            total_shield = 0
+            total_hp = 0
+            
+            if use_point_system:
+                # 計算裝備加成後的生命值
+                total_health = base_health + equipment_health_bonus
+                total_shield = base_shield
+                
+                # 應用探險家套裝加成
+                explorer_hp_bonus = 200 if set_counts['explorer'] >= 2 else 0
+                total_health += explorer_hp_bonus
+                
+                # 總HP = 生命值 + 護盾值
+                total_hp = total_health + total_shield
+            
             # Prepare detailed calculation data
             calculation_details = {
+                'class_level': {
+                    'level': class_level,
+                    'multiplier': class_multiplier
+                },
                 'base_stats': {
                     'min_damage': min_damage,
                     'max_damage': max_damage,
@@ -543,9 +603,10 @@ class DamageCalculator:
                     'damage_after_crit': damage_after_crit
                 },
                 'dot_calculation': {
-                    'burn_chance': burn_chance,
-                    'bleed_chance': bleed_chance,
-                    'poison_chance': poison_chance,
+                    'burn_chance': final_burn_chance,
+                    'bleed_chance': final_bleed_chance,
+                    'poison_chance': final_poison_chance,
+                    'has_blood_butcher': has_blood_butcher,
                     'burn_damage': burn_damage if burn_chance > 0 else 0,
                     'bleeding_damage': bleeding_damage if bleed_chance > 0 else 0,
                     'poison_damage': poison_damage if poison_chance > 0 else 0
@@ -555,6 +616,8 @@ class DamageCalculator:
             result = {
                 'success': True,
                 'use_point_system': use_point_system,  # 新增字段，標記使用的模式
+                'class_level': class_level,
+                'class_multiplier': round(class_multiplier, 3),
                 'min_damage': round(min_damage, 2),
                 'max_damage': round(max_damage, 2),
                 'magic_damage': round(magic_damage, 2),
@@ -565,16 +628,17 @@ class DamageCalculator:
                 'effective_magic_damage': round(effective_magic_damage, 2),
                 'base_damage': round(base_damage, 2),
                 'expected_damage': round(expected_damage, 2),  # 新增：期望傷害
-                'damage_after_crit': round(damage_after_crit, 2),  # 新增：100%爆擊傷害
-                'crit_multiplied_damage': round(total_damage, 2),  # 保持舊名稱兼容
+                'damage_after_crit': round(damage_after_crit, 2),  # 新增：100%爆擊傷害（含class level加成）
+                'crit_multiplied_damage': round(total_damage, 2),  # 保持舊名稱兼容（含class level加成）
                 'dot_damage': round(dot_damage, 2),
                 'final_damage': round(final_damage, 2),
                 'effective_multiplier': round(final_damage / base_damage, 2) if base_damage > 0 else 0,
                 'crit_rate': round(total_crit_rate, 1),
                 'crit_damage': round(total_crit_damage, 1),
-                'burn_chance': round(burn_chance * 100, 1),
-                'bleed_chance': round(bleed_chance * 100, 1),
-                'poison_chance': round(poison_chance * 100, 1),
+                'burn_chance': round(final_burn_chance, 1),
+                'bleed_chance': round(final_bleed_chance, 1),
+                'poison_chance': round(final_poison_chance, 1),
+                'has_blood_butcher': has_blood_butcher,
                 'flame_set_count': flame_set_count,
                 'damage_type': damage_type,
                 'set_counts': set_counts,
@@ -599,13 +663,10 @@ class DamageCalculator:
             }
             
             if use_point_system:
-                # Apply explorer set bonus to health
-                explorer_hp_bonus = 200 if set_counts['explorer'] >= 2 else 0
-                
                 result['player_stats'] = {
-                    'health': vitality * DamageCalculator.VIT_HP + explorer_hp_bonus,
-                    'shield': defense * DamageCalculator.DEF_SHIELD,
-                    'total_hp': vitality * DamageCalculator.VIT_HP + defense * DamageCalculator.DEF_SHIELD + explorer_hp_bonus,
+                    'health': total_health,  # 最終生命值（包含基礎100HP+VIT加成+裝備加成+套裝加成）
+                    'shield': total_shield,
+                    'total_hp': total_hp,
                     'min_damage': min_damage,
                     'max_damage': max_damage,
                     'magic_damage': magic_damage,
@@ -656,7 +717,8 @@ def optimize_damage():
             'magicPotion': data.get('magicPotion', False),
             'attackPotion': data.get('attackPotion', False),
             'goldenApple': data.get('goldenApple', False),
-            'useOldVersion': data.get('useOldVersion', False)
+            'useOldVersion': data.get('useOldVersion', False),
+            'classLevel': data.get('classLevel', 15)
         }
         
         if base_config['usePointSystem']:
@@ -665,7 +727,7 @@ def optimize_damage():
                 'vitality': data.get('vitality', 0),
                 'intelligence': data.get('intelligence', 0),
                 'dexterity': data.get('dexterity', 0),
-                'defense': data.get('defense', 0)
+                'defense': 0  # 防禦點數設為0，因為UI中已移除
             })
         else:
             base_config.update({
@@ -758,7 +820,8 @@ def optimize_damage_advanced():
             'attackPotion': data.get('attackPotion', False),
             'goldenApple': data.get('goldenApple', False),
             'playerLevel': data.get('playerLevel', MAX_LEVEL),  # 使用 MAX_LEVEL
-            'useOldVersion': data.get('useOldVersion', False)
+            'useOldVersion': data.get('useOldVersion', False),
+            'classLevel': data.get('classLevel', 15)
         }
         
         if base_config['usePointSystem']:
@@ -767,7 +830,7 @@ def optimize_damage_advanced():
                 'vitality': data.get('vitality', 0),
                 'intelligence': data.get('intelligence', 0),
                 'dexterity': data.get('dexterity', 0),
-                'defense': data.get('defense', 0)
+                'defense': 0  # 防禦點數設為0，因為UI中已移除
             })
         else:
             base_config.update({
@@ -778,7 +841,7 @@ def optimize_damage_advanced():
                 'critDamage': data.get('critDamage', 100)
             })
         
-        optimization_type = data.get('optimizationType', 'final_damage')  # final_damage, ten_second, first_hit, dot
+        optimization_type = data.get('optimizationType', 'final_damage')  # final_damage, ten_second, dot (移除 first_hit)
         
         # Get all equipment IDs that meet level requirement
         player_level = base_config['playerLevel']
@@ -856,8 +919,6 @@ def optimize_damage_advanced():
                     score = result['final_damage']
                 elif optimization_type == 'ten_second':
                     score = result['ten_second_damage']['total_damage']
-                elif optimization_type == 'first_hit':
-                    score = result['ten_second_damage']['hit_1']
                 elif optimization_type == 'dot':
                     score = result['dot_damage']
                 else:
@@ -867,7 +928,6 @@ def optimize_damage_advanced():
                     'equipment': list(combo),
                     'final_damage': result['final_damage'],
                     'ten_second_total': result['ten_second_damage']['total_damage'],
-                    'first_hit': result['ten_second_damage']['hit_1'],
                     'dot_damage': result['dot_damage'],
                     'crit_rate': result['crit_rate'],
                     'crit_damage': result['crit_damage'],
@@ -897,7 +957,6 @@ def optimize_damage_advanced():
                 'equipment_names': equipment_names,
                 'final_damage': round(combo['final_damage'], 2),
                 'ten_second_total': round(combo['ten_second_total'], 2),
-                'first_hit': round(combo['first_hit'], 2),
                 'dot_damage': round(combo['dot_damage'], 2),
                 'crit_rate': round(combo['crit_rate'], 1),
                 'crit_damage': round(combo['crit_damage'], 1),
@@ -944,17 +1003,16 @@ def optimize_stats():
                     'strength': 0,
                     'intelligence': 0,
                     'dexterity': 0,
-                    'defense': 0,
                     'reason': 'All points allocated to vitality'
                 }
             })
         
         # For low levels, focus on main stat (STR/INT) over DEX
         # For high levels, balance between main stat and DEX
-        # Defense is not recommended for damage optimization
+        # 移除防禦加點
         
         if player_level < 50:
-            # Low level: 85% main stat, 15% DEX (no defense for damage)
+            # Low level: 85% main stat, 15% DEX
             if weapon_type == 'magic':
                 intelligence = int(remaining_points * 0.85)
                 dexterity = min(int(remaining_points * 0.15), 50)  # Cap at 50
@@ -963,10 +1021,10 @@ def optimize_stats():
                 strength = int(remaining_points * 0.85)
                 dexterity = min(int(remaining_points * 0.15), 50)
                 intelligence = 0
-            defense = 0  # No points in defense for damage optimization
+            defense = 0  # 移除防禦加點
             
         elif player_level < 100:
-            # Mid level: 75% main stat, 25% DEX (no defense for damage)
+            # Mid level: 75% main stat, 25% DEX
             if weapon_type == 'magic':
                 intelligence = int(remaining_points * 0.75)
                 dexterity = min(int(remaining_points * 0.25), 50)
@@ -975,10 +1033,10 @@ def optimize_stats():
                 strength = int(remaining_points * 0.75)
                 dexterity = min(int(remaining_points * 0.25), 50)
                 intelligence = 0
-            defense = 0  # No points in defense for damage optimization
+            defense = 0  # 移除防禦加點
             
         else:
-            # High level: 65% main stat, 35% DEX (no defense for damage)
+            # High level: 65% main stat, 35% DEX
             if weapon_type == 'magic':
                 intelligence = int(remaining_points * 0.65)
                 dexterity = min(int(remaining_points * 0.35), 50)
@@ -987,7 +1045,7 @@ def optimize_stats():
                 strength = int(remaining_points * 0.65)
                 dexterity = min(int(remaining_points * 0.35), 50)
                 intelligence = 0
-            defense = 0  # No points in defense for damage optimization
+            defense = 0  # 移除防禦加點
         
         # Ensure we don't exceed point limit and distribute remaining points to main stat
         total_used = vitality + strength + intelligence + dexterity + defense
