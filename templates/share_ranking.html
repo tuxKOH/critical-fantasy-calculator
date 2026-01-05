@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rankings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <style>
+        @media screen and (min-width: 801px) {
+            body {
+                margin: 0;
+                padding: 0;
+                background: #2c3e50;
+                font-family: Arial;
+                font-size: 11px;
+                width: 800px;
+                height: 500px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .container {
+                border: none;
+                border-radius: 8px;
+                padding: 15px;
+                width: 780px;
+                height: 480px;
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+                gap: 15px;
+                background: white;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            }
+        }
+        
+        @media screen and (max-width: 800px) {
+            body {
+                margin: 0;
+                padding: 0;
+                background: #2c3e50;
+                font-family: Arial;
+                font-size: 11px;
+                width: 100vw;
+                height: 62.5vw;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .container {
+                border: none;
+                border-radius: 6px;
+                padding: 12px;
+                width: 95vw;
+                height: calc(95vw / 1.6);
+                max-height: 85vh;
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+                gap: 12px;
+                background: white;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            }
+        }
+        
+        /* 共用樣式 */
+        .title {
+            font-weight: bold;
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        /* 配置區域 */
+        .config-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .config-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .weapon-img {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            object-fit: contain;
+            background: white;
+            padding: 3px;
+        }
+        
+        .config-info {
+            font-size: 11px;
+        }
+        
+        .config-item {
+            margin-bottom: 4px;
+        }
+        
+        .config-label {
+            color: #7f8c8d;
+            font-size: 10px;
+        }
+        
+        .config-value {
+            font-weight: bold;
+            font-size: 12px;
+            color: #2c3e50;
+        }
+        
+        /* 狀態分配顯示 */
+        .stats-distribution {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .stat-name {
+            font-size: 9px;
+            color: #7f8c8d;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+        
+        .stat-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .str { color: #e74c3c; border-color: #e74c3c; }
+        .vit { color: #3498db; border-color: #3498db; }
+        .int { color: #9b59b6; border-color: #9b59b6; }
+        .dex { color: #2ecc71; border-color: #2ecc71; }
+        
+        /* 詳細屬性分配 */
+        .detailed-attr {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #ddd;
+        }
+        
+        .attr-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .attr-detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .attr-detail-label {
+            color: #7f8c8d;
+            font-size: 10px;
+        }
+        
+        .attr-detail-value {
+            font-weight: bold;
+            font-size: 11px;
+            color: #2c3e50;
+        }
+        
+        /* 排名區域 - 水平排列 */
+        .rankings-area {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+        
+        .rank-card {
+            padding: 10px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 6px;
+            border-top: 4px solid;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
+        
+        .rank-1 { border-top-color: #ffd700; background: linear-gradient(135deg, #fff9e6, #fff3cc); }
+        .rank-2 { border-top-color: #c0c0c0; background: linear-gradient(135deg, #f8f9fa, #e9ecef); }
+        .rank-3 { border-top-color: #cd7f32; background: linear-gradient(135deg, #fdf6e6, #f9e9c8); }
+        .rank-4 { border-top-color: #3498db; background: linear-gradient(135deg, #e8f4fd, #d1e8fa); }
+        .rank-5 { border-top-color: #2ecc71; background: linear-gradient(135deg, #e8f8ef, #d1f0e0); }
+        
+        .rank-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .rank-number {
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .rank-medal {
+            font-size: 14px;
+        }
+        
+        .rank-score {
+            font-size: 14px;
+            font-weight: bold;
+            color: #3498db;
+            text-align: center;
+            margin: 5px 0;
+        }
+        
+        /* 排名內容 */
+        .damage-stats {
+            display: grid;
+            grid-template-rows: repeat(3, auto);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .damage-stat {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 10px;
+        }
+        
+        .damage-label {
+            color: #7f8c8d;
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        .damage-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .final-damage { color: #2ecc71; }
+        .ten-second { color: #f39c12; }
+        .dot-damage { color: #e74c3c; }
+        
+        /* 裝備 */
+        .equipment-section {
+            margin-top: auto;
+        }
+        
+        .equipment-title {
+            font-size: 10px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .eq-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            justify-content: center;
+        }
+        
+        .eq-img {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            object-fit: contain;
+            background: white;
+            padding: 2px;
+        }
+        
+        /* 底部統計 */
+        .stats-area {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 8px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stat-box-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-box-label {
+            font-size: 9px;
+            color: #7f8c8d;
+            margin-top: 3px;
+        }
+        
+        /* 底部 */
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            color: #95a5a6;
+            padding-top: 10px;
+            border-top: 2px solid #ecf0f1;
+        }
+        
+        .generated-by {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .generated-by a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .generated-by a:hover {
+            text-decoration: underline;
+        }
+        
+        .timestamp {
+            font-size: 9px;
+            color: #7f8c8d;
+        }
+        
+        /* 版本標籤 */
+        .version-tag {
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-left: 3px;
+        }
+        
+        .version-current { background: #2ecc71; color: white; }
+        .version-old { background: #f39c12; color: white; }
+        .version-mixed { background: #e74c3c; color: white; }
+        
+        /* 排名類型標籤 */
+        .rank-type-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #9b59b6;
+            color: white;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .empty-text {
+            font-size: 10px;
+            color: #bdc3c7;
+            text-align: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px dashed #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 配置區域 -->
+        <div class="config-area">
+            <div class="config-box">
+                {% if weapon_image_url %}
+                <img src="{{ weapon_image_url }}" class="weapon-img" alt="Weapon">
+                {% endif %}
+                <div class="config-info">
+                    <div style="font-weight:bold; font-size:14px; color:#2c3e50; margin-bottom:3px;">
+                        {{ weapon_name }}
+                    </div>
+                    <div class="config-item">
+                        <div class="config-label">Player Level:</div>
+                        <div class="config-value">{{ player_level }}</div>
+                    </div>
+                    <div class="config-item">
+                        <div class="config-label">Rank Type:</div>
+                        <div class="config-value">{{ rank_name }}</div>
+                    </div>
+                    <div class="config-item">
+                        <div class="config-label">Version:</div>
+                        <div class="config-value">{{ version|capitalize }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 狀態分配 -->
+            <div class="stats-distribution">
+                <div class="title">📊 Stats Distribution</div>
+                {% if stats_distribution %}
+                <div class="stats-grid">
+                    <div class="stat-item str">
+                        <div class="stat-name">STR</div>
+                        <div class="stat-value">{{ stats_distribution.str|default(0) }}</div>
+                    </div>
+                    <div class="stat-item vit">
+                        <div class="stat-name">VIT</div>
+                        <div class="stat-value">{{ stats_distribution.vit|default(0) }}</div>
+                    </div>
+                    <div class="stat-item int">
+                        <div class="stat-name">INT</div>
+                        <div class="stat-value">{{ stats_distribution.int|default(0) }}</div>
+                    </div>
+                    <div class="stat-item dex">
+                        <div class="stat-name">DEX</div>
+                        <div class="stat-value">{{ stats_distribution.dex|default(0) }}</div>
+                    </div>
+                </div>
+                
+                <div class="detailed-attr">
+                    <div class="attr-detail-grid">
+                        <div class="attr-detail-item">
+                            <span class="attr-detail-label">Strength (ATK):</span>
+                            <span class="attr-detail-value">{{ stats_distribution.str|default(0) }}</span>
+                        </div>
+                        <div class="attr-detail-item">
+                            <span class="attr-detail-label">Vitality (HP):</span>
+                            <span class="attr-detail-value">{{ stats_distribution.vit|default(0) }}</span>
+                        </div>
+                        <div class="attr-detail-item">
+                            <span class="attr-detail-label">Intelligence (Magic):</span>
+                            <span class="attr-detail-value">{{ stats_distribution.int|default(0) }}</span>
+                        </div>
+                        <div class="attr-detail-item">
+                            <span class="attr-detail-label">Dexterity (Crit):</span>
+                            <span class="attr-detail-value">{{ stats_distribution.dex|default(0) }}</span>
+                        </div>
+                        <div class="attr-detail-item">
+                            <span class="attr-detail-label">Defense (Shield):</span>
+                            <span class="attr-detail-value">{{ stats_distribution.def|default(0) }}</span>
+                        </div>
+                        <div class="attr-detail-item">
+                            <span class="attr-detail-label">Total Used:</span>
+                            <span class="attr-detail-value">{{ stats_distribution.total_used|default(0) }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-text">Manual Input Mode</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 排名區域 - 水平排列 -->
+        <div>
+            <div class="title">
+                🏆 Top 5 Combinations
+                <span class="rank-type-badge">
+                    {% if optimization_type == 'final_damage' %}
+                    FINAL DMG
+                    {% elif optimization_type == 'ten_second' %}
+                    10s TOTAL
+                    {% elif optimization_type == 'dot' %}
+                    DoT DMG
+                    {% endif %}
+                </span>
+            </div>
+            <div class="rankings-area">
+                {% for combo in top_combinations %}
+                <div class="rank-card rank-{{ loop.index }}">
+                    <div class="rank-header">
+                        <div class="rank-number">
+                            #{{ loop.index }}
+                            {% if loop.index <= 3 %}
+                            <span class="rank-medal">
+                                {% if loop.index == 1 %}🥇
+                                {% elif loop.index == 2 %}🥈
+                                {% elif loop.index == 3 %}🥉
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="rank-score">{{ combo.score|format_number }}</div>
+                    </div>
+                    
+                    <div class="damage-stats">
+                        <div class="damage-stat">
+                            <span class="damage-label">Final:</span>
+                            <span class="damage-value final-damage">{{ combo.final_damage|format_number }}</span>
+                        </div>
+                        <div class="damage-stat">
+                            <span class="damage-label">10s:</span>
+                            <span class="damage-value ten-second">{{ combo.ten_second_total|format_number }}</span>
+                        </div>
+                        <div class="damage-stat">
+                            <span class="damage-label">DoT:</span>
+                            <span class="damage-value dot-damage">{{ combo.dot_damage|format_number }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="equipment-section">
+                        <div class="equipment-title">
+                            Equipment
+                            {% if combo.has_old_items %}
+                            <span class="version-tag version-mixed">MIXED</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if combo.equipment_images %}
+                        <div class="eq-images">
+                            {% for image_url in combo.equipment_images %}
+                            <img src="{{ image_url }}" class="eq-img" alt="Equipment">
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-text">{{ combo.equipment_names|join(', ')|truncate(40) }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 底部統計 -->
+        <div class="stats-area">
+            <div class="stat-box">
+                <div class="stat-box-value">{{ total_combinations_tested|format_number }}</div>
+                <div class="stat-box-label">Combinations Tested</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-box-value">{{ available_equipment_count }}</div>
+                <div class="stat-box-label">Available Equipment</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-box-value">5</div>
+                <div class="stat-box-label">Top Results</div>
+            </div>
+        </div>
+        
+        <!-- 底部 -->
+        <div class="footer">
+            <div class="generated-by">
+                Generated by <a href="https://critical-fantasy-calculator.vercel.app/" target="_blank">critical-fantasy-calculator.vercel.app</a>
+            </div>
+            <div class="timestamp">
+                @tux_koh • {{ timestamp }}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Damage Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <style>
+        @media screen and (min-width: 801px) {
+            body {
+                margin: 0;
+                padding: 0;
+                background: #2c3e50;
+                font-family: Arial;
+                font-size: 11px;
+                width: 800px;
+                height: 500px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .container {
+                border: none;
+                border-radius: 8px;
+                padding: 15px;
+                width: 780px;
+                height: 480px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                background: white;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            }
+        }
+        
+        @media screen and (max-width: 800px) {
+            body {
+                margin: 0;
+                padding: 0;
+                background: #2c3e50;
+                font-family: Arial;
+                font-size: 11px;
+                width: 100vw;
+                height: 62.5vw;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .container {
+                border: none;
+                border-radius: 6px;
+                padding: 12px;
+                width: 95vw;
+                height: calc(95vw / 1.6);
+                max-height: 85vh;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                background: white;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            }
+        }
+        
+        /* 共用樣式 */
+        .section {
+            margin-bottom: 10px;
+        }
+        
+        .title {
+            font-weight: bold;
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        /* 武器和玩家 */
+        .weapon-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .weapon-img {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            object-fit: contain;
+            background: white;
+            padding: 3px;
+        }
+        
+        .weapon-name {
+            font-weight: bold;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        
+        .weapon-meta {
+            font-size: 11px;
+            color: #7f8c8d;
+        }
+        
+        .class-badge {
+            display: inline-block;
+            background: #9b59b6;
+            color: white;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        
+        /* 玩家屬性分配 */
+        .attribute-distribution {
+            margin-top: 8px;
+            padding: 8px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .attr-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+        
+        .attr-item {
+            text-align: center;
+            padding: 4px;
+            background: white;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+        
+        .attr-label {
+            font-size: 9px;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+        
+        .attr-value {
+            font-size: 11px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .attr-str { border-color: #e74c3c; }
+        .attr-vit { border-color: #3498db; }
+        .attr-int { border-color: #9b59b6; }
+        .attr-dex { border-color: #2ecc71; }
+        
+        /* 玩家狀態 */
+        .player-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 11px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 8px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .hp { color: #e74c3c; }
+        .atk { color: #3498db; }
+        .magic { color: #9b59b6; }
+        
+        /* 裝備 */
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .eq-item {
+            text-align: center;
+            padding: 8px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.2s;
+        }
+        
+        .eq-item:hover {
+            transform: translateY(-2px);
+            border-color: #3498db;
+        }
+        
+        .eq-img {
+            width: 35px;
+            height: 35px;
+            margin: 0 auto 5px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            object-fit: contain;
+            background: white;
+            padding: 2px;
+        }
+        
+        .eq-name {
+            font-size: 10px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+        
+        .eq-tier {
+            font-size: 9px;
+            color: white;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        /* 傷害結果 */
+        .damage-main {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .final-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2ecc71;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 5px;
+        }
+        
+        .final-label {
+            font-size: 13px;
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .damage-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+        
+        .damage-item {
+            text-align: center;
+            padding: 10px 5px;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid;
+            transition: transform 0.2s;
+        }
+        
+        .damage-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .crit-damage { border-color: #9b59b6; }
+        .dot-damage { border-color: #e74c3c; }
+        .total-damage { border-color: #f39c12; }
+        
+        .damage-label {
+            font-size: 10px;
+            color: #7f8c8d;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+        
+        .damage-value {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .crit-value { color: #9b59b6; }
+        .dot-value { color: #e74c3c; }
+        .total-value { color: #f39c12; }
+        
+        /* 統計 */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            font-size: 11px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .stat-name {
+            color: #7f8c8d;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+        }
+        
+        .type { color: #3498db; }
+        .crit-rate { color: #9b59b6; }
+        .crit-dmg { color: #8e44ad; }
+        .multiplier { color: #f39c12; }
+        .mechanic { color: #16a085; }
+        
+        /* 藥水和DoT */
+        .effects-section {
+            padding: 10px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        
+        .tag {
+            font-size: 9px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .potion-tag {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+        
+        .burn-tag {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .bleed-tag {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            color: white;
+        }
+        
+        .poison-tag {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+        
+        /* 底部信息 */
+        .footer {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 10px;
+            color: #95a5a6;
+            padding-top: 10px;
+            border-top: 2px solid #ecf0f1;
+            margin-top: 10px;
+        }
+        
+        .generated-by {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .generated-by a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .generated-by a:hover {
+            text-decoration: underline;
+        }
+        
+        .timestamp {
+            font-size: 9px;
+            color: #7f8c8d;
+        }
+        
+        /* 空狀態 */
+        .empty {
+            text-align: center;
+            color: #bdc3c7;
+            font-size: 11px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 2px dashed #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左側 -->
+        <div>
+            <!-- 武器 -->
+            <div class="section">
+                <div class="title">⚔️ Weapon</div>
+                <div class="weapon-box">
+                    {% if weapon_image_url %}
+                    <img src="{{ weapon_image_url }}" class="weapon-img" alt="Weapon">
+                    {% endif %}
+                    <div>
+                        <div class="weapon-name">{{ weapon_name }}</div>
+                        <div class="weapon-meta">
+                            {{ weapon_type|upper }} • Lv.{{ player_level }}
+                            <span class="class-badge">Class {{ class_level }} ({{ class_multiplier }}x)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 屬性分配 -->
+                {% if attribute_distribution %}
+                <div class="attribute-distribution">
+                    <div style="font-size:10px; color:#666; margin-bottom:4px; font-weight:600;">Attribute Points Distribution</div>
+                    <div class="attr-grid">
+                        <div class="attr-item attr-str">
+                            <div class="attr-label">STR</div>
+                            <div class="attr-value">{{ attribute_distribution.str|default(0) }}</div>
+                        </div>
+                        <div class="attr-item attr-vit">
+                            <div class="attr-label">VIT</div>
+                            <div class="attr-value">{{ attribute_distribution.vit|default(0) }}</div>
+                        </div>
+                        <div class="attr-item attr-int">
+                            <div class="attr-label">INT</div>
+                            <div class="attr-value">{{ attribute_distribution.int|default(0) }}</div>
+                        </div>
+                        <div class="attr-item attr-dex">
+                            <div class="attr-label">DEX</div>
+                            <div class="attr-value">{{ attribute_distribution.dex|default(0) }}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:9px; color:#666; margin-top:4px; text-align:center;">
+                        Total: {{ attribute_distribution.total_used|default(0) }}/{{ player_level * 2 }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- 玩家狀態 -->
+            {% if player_stats %}
+            <div class="section">
+                <div class="title">👤 Player Stats</div>
+                <div class="player-stats">
+                    <div class="stat">
+                        <span class="stat-label">Total HP:</span>
+                        <span class="stat-value hp">{{ player_stats.total_hp|format_number }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">ATK Mult:</span>
+                        <span class="stat-value atk">{{ player_stats.attack_multiplier }}x</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Min ATK:</span>
+                        <span class="stat-value atk">{{ player_stats.min_damage|format_number }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Max ATK:</span>
+                        <span class="stat-value atk">{{ player_stats.max_damage|format_number }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Magic:</span>
+                        <span class="stat-value magic">{{ player_stats.magic_damage|format_number }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Health:</span>
+                        <span class="stat-value hp">{{ player_stats.health|format_number }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 裝備 -->
+            <div class="section">
+                <div class="title">🎯 Equipment ({{ equipment_count }}/3)</div>
+                {% if equipment %}
+                <div class="equipment-grid">
+                    {% for eq in equipment %}
+                    <div class="eq-item">
+                        {% if eq.image_url %}
+                        <img src="{{ eq.image_url }}" class="eq-img" alt="{{ eq.name }}">
+                        {% endif %}
+                        <div class="eq-name">{{ eq.name|truncate(15) }}</div>
+                        <div class="eq-tier">T{{ eq.tier }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty">No Equipment Selected</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 右側 -->
+        <div>
+            <!-- 傷害結果 -->
+            <div class="section">
+                <div class="title">💥 Damage Results</div>
+                <div class="damage-main">
+                    <div class="final-number">{{ final_damage|format_number }}</div>
+                    <div class="final-label">Final Damage</div>
+                    
+                    <div class="damage-breakdown">
+                        <div class="damage-item crit-damage">
+                            <div class="damage-label">Damage After Crit</div>
+                            <div class="damage-value crit-value">
+                                {% if damage_after_crit %}
+                                    {{ damage_after_crit|format_number }}
+                                {% else %}
+                                    {{ base_damage|format_number }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="damage-item dot-damage">
+                            <div class="damage-label">DoT</div>
+                            <div class="damage-value dot-value">{{ dot_damage|format_number }}</div>
+                        </div>
+                        <div class="damage-item total-damage">
+                            <div class="damage-label">10s Total</div>
+                            <div class="damage-value total-value">{{ ten_second_total|format_number }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 統計 -->
+            <div class="section">
+                <div class="title">📊 Statistics</div>
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="stat-name">Type:</span>
+                        <span class="stat-value type">{{ damage_type }}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Crit Rate:</span>
+                        <span class="stat-value crit-rate">{{ crit_rate }}%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Crit DMG:</span>
+                        <span class="stat-value crit-dmg">{{ crit_damage }}%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Multiplier:</span>
+                        <span class="stat-value multiplier">{{ effective_multiplier }}x</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Mechanic:</span>
+                        <span class="stat-value mechanic">{{ attack_mechanic|truncate(20) }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 藥水和DoT -->
+            <div class="section">
+                <div class="title">✨ Effects</div>
+                <div class="effects-section">
+                    <div class="tags">
+                        {% for potion in potions %}
+                        <div class="tag potion-tag">{{ potion|truncate(25) }}</div>
+                        {% endfor %}
+                        {% if burn_chance > 0 %}
+                        <div class="tag burn-tag">Burn: {{ burn_chance }}%</div>
+                        {% endif %}
+                        {% if bleed_chance > 0 %}
+                        <div class="tag bleed-tag">Bleed: {{ bleed_chance }}%</div>
+                        {% endif %}
+                        {% if poison_chance > 0 %}
+                        <div class="tag poison-tag">Poison: {{ poison_chance }}%</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部 -->
+        <div class="footer">
+            <div class="generated-by">
+                Generated by <a href="https://critical-fantasy-calculator.vercel.app/" target="_blank">critical-fantasy-calculator.vercel.app</a>
+            </div>
+            <div class="timestamp">
+                @tux_koh • {{ timestamp }}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

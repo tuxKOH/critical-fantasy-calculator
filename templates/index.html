@@ -10,7 +10,6 @@ Copyright (C) 2024  @tux_koh
     <title>Fantasy Damage Calculator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* 圖片加載樣式 */
         .weapon-image {
             float: left;
             margin-right: 10px;
@@ -25,14 +24,12 @@ Copyright (C) 2024  @tux_koh
             border: 1px solid #e0e0e0;
         }
         
-        /* 確保清除浮動 */
         .clearfix::after {
             content: "";
             clear: both;
             display: table;
         }
         
-        /* 優化結果中的混合版本標記 */
         .mixed-version-tag {
             background: #dc3545;
             color: white;
@@ -42,7 +39,6 @@ Copyright (C) 2024  @tux_koh
             margin-left: 5px;
         }
         
-        /* Class level badge */
         .class-level-badge {
             background: linear-gradient(135deg, #9b59b6, #8e44ad);
             color: white;
@@ -52,9 +48,88 @@ Copyright (C) 2024  @tux_koh
             display: inline-block;
             margin-left: 5px;
         }
+        
+        /* 分享按鈕樣式 */
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .share-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            flex: 1;
+        }
+        
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #45a049, #3d8b40);
+        }
+        
+        .share-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* 通知樣式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            color: white;
+            border-radius: 5px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .notification-success {
+            background: #4CAF50;
+        }
+        
+        .notification-error {
+            background: #f44336;
+        }
+        
+        .notification-info {
+            background: #2196F3;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
     <script>
-        // Make database available to JavaScript
         window.equipmentDb = {{ equipment_db | tojson | safe }};
         window.weaponDb = {{ weapon_db | tojson | safe }};
         window.isMobile = {{ is_mobile | tojson | safe }};
@@ -69,7 +144,6 @@ Copyright (C) 2024  @tux_koh
         
         <div class="calculator">
             <div class="left-panel">
-                <!-- Input System Toggle -->
                 <div class="panel-section">
                     <h3>Input System</h3>
                     <div class="system-toggle">
@@ -82,7 +156,6 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
 
-                <!-- Game Version Selection -->
                 <div class="panel-section">
                     <h3>items Version</h3>
                     <div class="system-toggle">
@@ -98,7 +171,6 @@ Copyright (C) 2024  @tux_koh
                     </p>
                 </div>
 
-                <!-- Player Level -->
                 <div class="panel-section">
                     <h3>Player Level</h3>
                     <div class="form-group">
@@ -107,7 +179,6 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
                 
-                <!-- Class Level -->
                 <div class="panel-section">
                     <h3>Class Level <span style="color: #666; font-size: 0.8em;">(max 15)</span></h3>
                     <div class="form-group">
@@ -119,7 +190,6 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
 
-                <!-- Weapon Selection -->
                 <div class="panel-section">
                     <h3>Weapon Selection</h3>
                     <div class="form-group">
@@ -144,7 +214,6 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
                 
-                <!-- Attribute Points Section -->
                 <div class="panel-section" id="pointsSection">
                     <h3>Attribute Points (Level 200) <button class="small-btn" id="optimizeStatsBtn">Optimize Stats</button></h3>
                     <div class="attribute-points">
@@ -172,7 +241,6 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
                 
-                <!-- Manual Input Section -->
                 <div class="panel-section" id="manualSection" style="display: none;">
                     <h3>Manual Stats Input</h3>
                     <div class="stats-grid">
@@ -199,7 +267,6 @@ Copyright (C) 2024  @tux_koh
                     </div>
                 </div>
                 
-                <!-- Equipment Selection -->
                 <div class="panel-section">
                     <h3>Equipment Selection (Max 3)</h3>
                     <div class="equipment-search">
@@ -214,16 +281,13 @@ Copyright (C) 2024  @tux_koh
                         <button class="tier-filter">Tier V</button>
                     </div>
                     <div class="equipment-list" id="equipmentList">
-                        <!-- Equipment items will be populated by JavaScript -->
                     </div>
                     <div class="selected-equipment" id="selectedEquipment">
-                        <!-- Selected equipment will appear here -->
                     </div>
                 </div>
             </div>
             
             <div class="right-panel">
-                <!-- Potion Effects -->
                 <div class="panel-section">
                     <h3>Potion Effects</h3>
                     <div class="potion-grid">
@@ -238,30 +302,35 @@ Copyright (C) 2024  @tux_koh
                             <input type="checkbox" id="attackPotion">
                             <div class="potion-info">
                                 <div class="potion-name">Attack Potion</div>
-                                <div class="potion-desc">1.75x Attack Damage</div>
+                                <div class="potion-desc">+0.75x Attack Damage (additive with Golden Apple)</div>
                             </div>
                         </div>
                         <div class="potion-item">
                             <input type="checkbox" id="goldenApple">
                             <div class="potion-info">
                                 <div class="potion-name">Golden Apple</div>
-                                <div class="potion-desc">1.5x Attack Damage</div>
+                                <div class="potion-desc">+0.50x Attack Damage (additive with Attack Potion)</div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Player Stats -->
                 <div class="panel-section player-stats" id="playerStatsSection" style="display: none;">
                     <h3>Player Stats</h3>
                     <div id="playerStatsContent">
-                        <!-- Player stats will be populated here -->
                     </div>
                 </div>
                 
-                <!-- Results -->
                 <div class="panel-section result" id="resultSection" style="display: none;">
                     <h3>Calculation Results <span id="classLevelBadge" style="display: none;" class="class-level-badge">Class: 1.30x</span></h3>
+                    
+                    <!-- 分享結果按鈕 -->
+                    <div class="share-buttons">
+                        <button class="share-btn" id="shareResultBtn">
+                            📤 Share Result as Image
+                        </button>
+                    </div>
+                    
                     <div class="result-grid">
                         <div>
                             <div class="result-item">
@@ -282,7 +351,6 @@ Copyright (C) 2024  @tux_koh
                                 <span class="result-label result-highlight">Final Damage:</span>
                                 <span class="result-value result-highlight" id="resultFinal">0</span>
                             </div>
-                            <!-- 新增 Damage After Crit -->
                             <div class="result-item">
                                 <span class="result-label">Damage After Crit:</span>
                                 <span class="result-value" id="resultDamageAfterCrit">0</span>
@@ -308,21 +376,27 @@ Copyright (C) 2024  @tux_koh
                 <button class="calculate-btn">Calculate Damage</button>
                 <button class="optimize-btn" id="optimizeBtn">Find Best Combinations</button>
                 
-                <!-- Optimization Results -->
                 <div class="panel-section optimize-result" id="optimizeResultSection" style="display: none;">
                     <h3>Top Damage Combinations</h3>
+                    
+                    <!-- 分享優化結果按鈕 -->
+                    <div class="share-buttons">
+                        <button class="share-btn" id="shareOptimizeBtn">
+                            📤 Share Top Combinations
+                        </button>
+                    </div>
+                    
                     <div class="optimization-filters">
                         <button class="filter-btn active">Final Damage Top 10</button>
                         <button class="filter-btn">10s Total Damage Top 10</button>
                         <button class="filter-btn">DoT Damage Top 10</button>
                     </div>
                     <div id="optimizeResultsContent">
-                        <!-- Optimization results will be populated here -->
                     </div>
                 </div>
                 
                 <div class="note">
-                    <strong>Note:</strong> DoT damage calculated separately. Flame Set bonus (+10% burn chance) with 2+ items. Damage type determined by weapon (Staff = Magic, Others = Physical). <strong>Furioso updated to 3.7x + bleed.</strong>
+                    <strong>Note:</strong> DoT damage calculated separately. Flame Set bonus (+10% burn chance) with 2+ items. Damage type determined by weapon (Staff = Magic, Others = Physical). Attack Potion (+0.75x) and Golden Apple (+0.50x) are additive. <strong>Furioso updated to 3.7x + bleed.</strong>
                 </div>
             </div>
         </div>
@@ -334,7 +408,6 @@ Copyright (C) 2024  @tux_koh
             <p><a href="https://www.roblox.com/game-pass/1540670718/donation" target="_blank">donate me 10 bobux :D</a></p>
         </div>
     </div>
-    <!-- Extra Data Modal -->
     <div id="extraDataModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -342,11 +415,11 @@ Copyright (C) 2024  @tux_koh
                 <h2>Detailed Calculation Data</h2>
             </div>
             <div class="modal-body" id="extraDataContent">
-                <!-- Extra data will be populated here -->
             </div>
         </div>
     </div>
 
+    <!-- 移除 html2canvas 庫 -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
