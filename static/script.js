@@ -1,6 +1,5 @@
 // Critical Fantasy Damage Calculator JavaScript
 document.addEventListener('DOMContentLoaded', function() {
-    // Global variables
     let selectedEquipment = [];
     const maxEquipment = 3;
     let equipmentDatabase = {};
@@ -9,9 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSearchFilter = '';
     let currentResult = null;
     let currentOptimizationType = 'final_damage';
-    let currentVersion = 'current'; // 'current' or 'old'
+    let currentVersion = 'current';
     
-    // Set indicator mapping
     const setIndicators = {
         'flame': { class: 'flame-set-indicator', text: 'Flame' },
         'wolf_howl': { class: 'wolf-set-indicator', text: 'Wolf' },
@@ -23,29 +21,17 @@ document.addEventListener('DOMContentLoaded', function() {
         'blessing': { class: 'blessing-set-indicator', text: 'Blessing' }
     };
     
-    // Initialize the application
     function initialize() {
-        // Load data from server or use provided data
         equipmentDatabase = window.equipmentDb || {};
         weaponDatabase = window.weaponDb || {};
         
-        // Initialize equipment list
         initializeEquipment();
-        
-        // Set up event listeners
         setupEventListeners();
-        
-        // Initialize points (移除防禦點數)
         updatePoints();
-        
-        // Update weapon info
         updateWeaponInfo();
-        
-        // Initial calculation
         calculateDamage();
     }
     
-    // Initialize equipment list
     function initializeEquipment() {
         const equipmentList = document.getElementById('equipmentList');
         equipmentList.innerHTML = '';
@@ -58,14 +44,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Create equipment item element with image support
     function createEquipmentItem(id, data) {
         const div = document.createElement('div');
         div.className = 'equipment-item';
         div.setAttribute('data-id', id);
         div.setAttribute('data-tier', data.tier);
         
-        // Check level requirement
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         const levelReq = data.level_req || 0;
         const meetsLevelReq = levelReq <= playerLevel;
@@ -74,13 +58,11 @@ document.addEventListener('DOMContentLoaded', function() {
             div.style.opacity = '0.6';
         }
         
-        // Check if it's an old version item
         const isOldItem = id.includes('_old');
         if (isOldItem) {
             div.classList.add('equipment-old');
         }
         
-        // Build stats string
         const stats = [];
         if (data.stats.atk_min !== undefined && data.stats.atk_max !== undefined) {
             stats.push(`ATK: ${data.stats.atk_min}-${data.stats.atk_max}`);
@@ -103,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
             stats.push(`Shield: +${data.stats.shield}`);
         }
         
-        // Build effects string
         const effects = [];
         if (data.special_effects && data.special_effects.damage_multiplier) {
             effects.push(`${data.special_effects.damage_multiplier}x Damage`);
@@ -136,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setIndicator = `<span class="${setInfo.class} set-indicators">${setInfo.text}</span>`;
         }
         
-        // Add version and level requirement info
         let versionInfo = '';
         if (isOldItem) {
             versionInfo = `<span class="old-version-tag">OLD</span>`;
@@ -147,10 +127,8 @@ document.addEventListener('DOMContentLoaded', function() {
             levelInfo = `<span style="color: ${meetsLevelReq ? '#28a745' : '#dc3545'}; font-size: 0.8em;">Lv. ${levelReq}</span>`;
         }
         
-        // Add image if available
         let imageHtml = '';
         if (data.image_url && data.image_url.trim()) {
-            // Clean up the URL
             const cleanUrl = data.image_url.trim();
             imageHtml = `
                 <div class="equipment-image">
@@ -173,7 +151,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        // Only allow selection if level requirement is met
         if (meetsLevelReq) {
             div.addEventListener('click', () => toggleEquipmentSelection(id));
         } else {
@@ -184,29 +161,25 @@ document.addEventListener('DOMContentLoaded', function() {
         return div;
     }
     
-    // Filter equipment based on search, tier, and version
     function filterEquipmentItem(id, data) {
         const matchesSearch = data.name.toLowerCase().includes(currentSearchFilter.toLowerCase()) ||
                             id.toLowerCase().includes(currentSearchFilter.toLowerCase());
         const matchesTier = currentTierFilter === 'all' || data.tier === currentTierFilter;
         
-        // Version filtering
         const isOldItem = id.includes('_old');
         const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         const matchesVersion = useOldVersion ? 
-            (isOldItem || !equipmentDatabase[id + '_old']) :  // Old version: show old items or items without old version
-            !isOldItem;  // Current version: don't show old items
+            (isOldItem || !equipmentDatabase[id + '_old']) :
+            !isOldItem;
         
         return matchesSearch && matchesTier && matchesVersion;
     }
     
-    // Filter equipment list
     function filterEquipment() {
         currentSearchFilter = document.getElementById('equipmentSearch').value;
         initializeEquipment();
     }
     
-    // Filter by tier
     function filterByTier(tier) {
         currentTierFilter = tier;
         document.querySelectorAll('.tier-filter').forEach(btn => {
@@ -216,16 +189,13 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeEquipment();
     }
     
-    // Toggle equipment selection with version compatibility check
     function toggleEquipmentSelection(id) {
         const eqData = equipmentDatabase[id];
         if (!eqData) return;
         
-        // Check for version conflicts
         const isOldItem = id.includes('_old');
         const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         
-        // Check if trying to select both old and new versions of the same item
         const baseId = isOldItem ? id.replace('_old', '') : id;
         const oppositeId = isOldItem ? baseId : baseId + '_old';
         
@@ -235,11 +205,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (selectedEquipment.includes(id)) {
-            // Deselect
             selectedEquipment = selectedEquipment.filter(eq => eq !== id);
             document.querySelector(`.equipment-item[data-id="${id}"]`).classList.remove('selected');
         } else {
-            // Select
             if (selectedEquipment.length < maxEquipment) {
                 selectedEquipment.push(id);
                 document.querySelector(`.equipment-item[data-id="${id}"]`).classList.add('selected');
@@ -251,20 +219,16 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Update equipment display when level changes
     function updateEquipmentDisplay() {
         const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         
-        // Update equipment list with current version filter
         initializeEquipment();
         
-        // Remove equipment that no longer meets level requirements or version conflicts
         selectedEquipment = selectedEquipment.filter(id => {
             const eqData = equipmentDatabase[id];
             if (!eqData) return false;
             
-            // Check level requirement
             const meetsLevelReq = (eqData.level_req || 0) <= playerLevel;
             if (!meetsLevelReq) {
                 const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
@@ -281,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Update selected equipment display
     function updateSelectedEquipmentDisplay() {
         const container = document.getElementById('selectedEquipment');
         container.innerHTML = '';
@@ -301,7 +264,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Add event listeners to remove buttons
         container.querySelectorAll('.remove-item').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -310,7 +272,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Remove equipment
     function removeEquipment(id) {
         selectedEquipment = selectedEquipment.filter(eq => eq !== id);
         document.querySelector(`.equipment-item[data-id="${id}"]`).classList.remove('selected');
@@ -318,7 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Toggle game version
     function toggleGameVersion(version) {
         const toggleCurrent = document.getElementById('toggleCurrent');
         const toggleOld = document.getElementById('toggleOld');
@@ -329,11 +289,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         currentVersion = version;
         
-        // Update equipment display and adjust selected equipment
         updateEquipmentDisplay();
     }
     
-    // Weapon selection with image support
     function updateWeaponInfo() {
         const weaponSelect = document.getElementById('weaponSelect');
         const weaponInfo = document.getElementById('weaponInfo');
@@ -358,54 +316,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 stats.push(`Crit DMG: +${weapon.stats.crit_damage}%`);
             }
             
-        const damageType = weapon.type === 'staff' ? 'Magic' : 'Physical';
-        
-        let setInfo = '';
-        if (weapon.set && setIndicators[weapon.set]) {
-            const setData = setIndicators[weapon.set];
-            setInfo = `<span class="${setData.class} set-indicators">${setData.text}</span>`;
-        }
-        
-        // Add level requirement
-        const levelReq = weapon.level_req || 0;
-        let levelInfo = '';
-        if (levelReq > 0) {
-            levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
-        }
-        
-        // Furioso special info
-        let furiosoInfo = '';
-        if (selectedWeapon === 'furioso') {
-            furiosoInfo = `<br><small style="color: #4a90e2;">Updated: 3.7x total damage + bleed on 4th hit</small>`;
-        }
-        
-        // Add weapon image
-        let imageHtml = '';
-        if (weapon.image_url && weapon.image_url.trim()) {
-            imageHtml = `
-                <div style="float: left; margin-right: 10px; margin-bottom: 5px;">
-                    <img src="${weapon.image_url.trim()}" alt="${weapon.name}" 
-                         style="max-width: 60px; max-height: 60px; object-fit: contain; border-radius: 4px; border: 1px solid #e0e0e0;"
-                         onerror="this.style.display='none'">
+            const damageType = weapon.type === 'staff' ? 'Magic' : 'Physical';
+            
+            let setInfo = '';
+            if (weapon.set && setIndicators[weapon.set]) {
+                const setData = setIndicators[weapon.set];
+                setInfo = `<span class="${setData.class} set-indicators">${setData.text}</span>`;
+            }
+            
+            const levelReq = weapon.level_req || 0;
+            let levelInfo = '';
+            if (levelReq > 0) {
+                levelInfo = `<br><small>Level Requirement: ${levelReq}</small>`;
+            }
+            
+            let furiosoInfo = '';
+            if (selectedWeapon === 'furioso') {
+                furiosoInfo = `<br><small style="color: #4a90e2;">Updated: 3.7x total damage + bleed on 4th hit</small>`;
+            }
+            
+            let imageHtml = '';
+            if (weapon.image_url && weapon.image_url.trim()) {
+                imageHtml = `
+                    <div style="float: left; margin-right: 10px; margin-bottom: 5px;">
+                        <img src="${weapon.image_url.trim()}" alt="${weapon.name}" 
+                             style="max-width: 60px; max-height: 60px; object-fit: contain; border-radius: 4px; border: 1px solid #e0e0e0;"
+                             onerror="this.style.display='none'">
+                    </div>
+                `;
+            }
+            
+            weaponInfo.innerHTML = `
+                <div style="overflow: hidden;">
+                    ${imageHtml}
+                    <div>
+                        <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}${furiosoInfo}<br>
+                        ${stats.join(', ')}
+                    </div>
                 </div>
             `;
+        } else {
+            weaponInfo.innerHTML = 'No weapon selected';
         }
-        
-        weaponInfo.innerHTML = `
-            <div style="overflow: hidden;">
-                ${imageHtml}
-                <div>
-                    <strong>${weapon.name}</strong> (${damageType}) ${setInfo}${levelInfo}${furiosoInfo}<br>
-                    ${stats.join(', ')}
-                </div>
-            </div>
-        `;
-    } else {
-        weaponInfo.innerHTML = 'No weapon selected';
     }
-}
     
-    // Toggle input system
     function toggleInputSystem(system) {
         document.getElementById('togglePoints').classList.toggle('active', system === 'points');
         document.getElementById('toggleManual').classList.toggle('active', system === 'manual');
@@ -415,7 +369,6 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Update points calculation (移除防禦點數)
     function updatePoints() {
         const strength = parseInt(document.getElementById('strength').value) || 0;
         const vitality = parseInt(document.getElementById('vitality').value) || 0;
@@ -423,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const dexterity = parseInt(document.getElementById('dexterity').value) || 0;
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         
-        const total = strength + vitality + intelligence + dexterity;  // 移除防禦點數
+        const total = strength + vitality + intelligence + dexterity;
         const maxPoints = playerLevel * 2;
         
         document.getElementById('totalPoints').textContent = total;
@@ -433,7 +386,6 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateDamage();
     }
     
-    // Set optimization type
     function setOptimizationType(type) {
         currentOptimizationType = type;
         document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -442,7 +394,6 @@ document.addEventListener('DOMContentLoaded', function() {
         event.target.classList.add('active');
     }
     
-    // Main damage calculation function
     function calculateDamage() {
         const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
         const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
@@ -467,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data.vitality = parseInt(document.getElementById('vitality').value) || 0;
             data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
             data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-            data.defense = 0;  // 防禦點數設為0
+            data.defense = 0;
         } else {
             data.minDamage = document.getElementById('minDamage').value;
             data.maxDamage = document.getElementById('maxDamage').value;
@@ -476,7 +427,6 @@ document.addEventListener('DOMContentLoaded', function() {
             data.critDamage = document.getElementById('critDamage').value;
         }
         
-        // Don't calculate if required fields are empty
         if (!usePointSystem && (!data.minDamage || !data.maxDamage || !data.magicDamage)) {
             return;
         }
@@ -493,7 +443,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 currentResult = result;
                 
-                // Update class level badge
                 const classLevelBadge = document.getElementById('classLevelBadge');
                 if (result.class_level && result.class_multiplier) {
                     classLevelBadge.textContent = `Class: ${result.class_multiplier}x`;
@@ -502,24 +451,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     classLevelBadge.style.display = 'none';
                 }
                 
-                // Update results display
                 document.getElementById('resultBaseDamage').textContent = result.base_damage.toLocaleString();
                 document.getElementById('resultDot').textContent = result.dot_damage.toLocaleString();
                 document.getElementById('resultFinal').textContent = result.final_damage.toLocaleString();
                 
-                // 使用 damage_after_crit 而不是 crit_multiplied_damage
                 document.getElementById('resultDamageAfterCrit').textContent = result.damage_after_crit.toLocaleString();
                 
                 document.getElementById('resultMultiplier').textContent = result.effective_multiplier + 'x';
                 document.getElementById('resultDamageType').textContent = result.damage_type === 'magic' ? 'Magic' : 'Physical';
                 
-                // Update ten second damage display
                 if (result.ten_second_damage) {
                     document.getElementById('resultTenSecond').textContent = result.ten_second_damage.total_damage.toLocaleString();
                     document.getElementById('resultMechanic').textContent = result.ten_second_damage.mechanic;
                 }
                 
-                // Show player stats if using point system
                 if (result.calculated_stats && result.player_stats) {
                     document.getElementById('playerStatsSection').style.display = 'block';
                     
@@ -552,12 +497,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="result-value">${(result.player_stats.total_hp || 0).toLocaleString()}</span>
                         </div>
                         <div class="result-item">
-                            <span class="result-label">Attack Range:</span>
-                            <span class="result-value">${result.player_stats.min_damage.toLocaleString()} - ${result.player_stats.max_damage.toLocaleString()}</span>
+                            <span class="result-label">Attack Range (Post-potion):</span>
+                            <span class="result-value">${(result.player_stats.min_damage || 0).toLocaleString()} - ${(result.player_stats.max_damage || 0).toLocaleString()}</span>
                         </div>
                         <div class="result-item">
-                            <span class="result-label">Magic Damage:</span>
-                            <span class="result-value">${result.player_stats.magic_damage.toLocaleString()}</span>
+                            <span class="result-label">Magic Damage (Post-potion):</span>
+                            <span class="result-value">${(result.player_stats.magic_damage || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Attack Multiplier:</span>
+                            <span class="result-value">${(result.player_stats.attack_multiplier || 1.0).toFixed(2)}x</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Crit Rate:</span>
@@ -587,7 +536,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Optimize damage function
     function optimizeDamageAdvanced() {
         const optimizeBtn = document.getElementById('optimizeBtn');
         optimizeBtn.textContent = 'Calculating...';
@@ -616,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data.vitality = parseInt(document.getElementById('vitality').value) || 0;
             data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
             data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
-            data.defense = 0;  // 防禦點數設為0
+            data.defense = 0;
         } else {
             data.minDamage = document.getElementById('minDamage').value;
             data.maxDamage = document.getElementById('maxDamage').value;
@@ -650,7 +598,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Display optimization results (移除First Hit顯示)
     function displayOptimizationResults(result) {
         const section = document.getElementById('optimizeResultSection');
         const content = document.getElementById('optimizeResultsContent');
@@ -665,7 +612,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }[result.optimization_type] || 'Score';
         
         result.top_combinations.forEach((combo, index) => {
-            // Check if this combo has old items
             const hasOldItems = combo.equipment_ids.some(id => id.includes('_old'));
             const versionTag = hasOldItems ? '<span style="color: #dc3545; font-size: 0.9em;">(Mixed)</span>' : '';
             
@@ -685,7 +631,6 @@ document.addEventListener('DOMContentLoaded', function() {
         content.innerHTML = html;
         section.style.display = 'block';
         
-        // Add event listeners to apply buttons
         content.querySelectorAll('.apply-combo-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const equipmentIds = JSON.parse(this.getAttribute('data-ids'));
@@ -694,15 +639,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Apply optimized combination
     function applyOptimizedCombo(equipmentIds) {
-        // Clear current selection
         selectedEquipment.forEach(id => {
             const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
             if (element) element.classList.remove('selected');
         });
         
-        // Select new equipment
         selectedEquipment = [...equipmentIds];
         selectedEquipment.forEach(id => {
             const element = document.querySelector(`.equipment-item[data-id="${id}"]`);
@@ -712,11 +654,9 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedEquipmentDisplay();
         calculateDamage();
         
-        // Scroll to results
         document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
     }
     
-    // Stats optimization function
     function optimizeStats() {
         const vitality = parseInt(document.getElementById('vitality').value) || 0;
         const selectedWeapon = document.getElementById('weaponSelect').value;
@@ -749,7 +689,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Apply optimized stats
     function applyOptimizedStats(recommendation) {
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         
@@ -763,7 +702,6 @@ document.addEventListener('DOMContentLoaded', function() {
         alert(`Optimized stats applied!\n${recommendation.reason}\n\nStrength: ${recommendation.strength}\nIntelligence: ${recommendation.intelligence}\nDexterity: ${recommendation.dexterity}\n\nTotal Used: ${recommendation.total_used}/${playerLevel * 2}`);
     }
     
-    // Show extra data modal
     function showExtraData() {
         if (!currentResult) return;
         
@@ -890,49 +828,269 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.style.display = 'block';
     }
     
-    // Close extra data modal
     function closeExtraData() {
         document.getElementById('extraDataModal').style.display = 'none';
     }
     
-    // Add point limits to input fields (移除防禦點數限制)
     function addPointLimits() {
         const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
         const maxPoints = playerLevel * 2;
         
-        // Set input field maximum values (移除防禦點數)
         document.getElementById('strength').max = maxPoints;
         document.getElementById('vitality').max = maxPoints;
         document.getElementById('intelligence').max = maxPoints;
-        document.getElementById('dexterity').max = 50; // DEX still capped at 50
+        document.getElementById('dexterity').max = 50;
     }
-
-    // Setup event listeners
+    
+    // ==================== 後端圖片生成功能 ====================
+    
+    // 分享計算結果為圖片
+    function shareResultAsImage() {
+        if (!currentResult) {
+            showNotification('Please calculate damage first', 'error');
+            return;
+        }
+        
+        const shareBtn = document.getElementById('shareResultBtn');
+        const originalText = shareBtn.textContent;
+        shareBtn.textContent = 'Generating Image...';
+        shareBtn.disabled = true;
+        
+        // 收集當前配置數據
+        const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
+        const selectedWeapon = document.getElementById('weaponSelect').value;
+        const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+        const classLevel = parseInt(document.getElementById('classLevel').value) || 15;
+        
+        const data = {
+            usePointSystem: usePointSystem,
+            useOldVersion: useOldVersion,
+            selectedWeapon: selectedWeapon,
+            playerLevel: playerLevel,
+            classLevel: classLevel,
+            equipment: selectedEquipment,
+            magicPotion: document.getElementById('magicPotion').checked,
+            attackPotion: document.getElementById('attackPotion').checked,
+            goldenApple: document.getElementById('goldenApple').checked
+        };
+        
+        if (usePointSystem) {
+            data.strength = parseInt(document.getElementById('strength').value) || 0;
+            data.vitality = parseInt(document.getElementById('vitality').value) || 0;
+            data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
+            data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
+            data.defense = 0;
+        } else {
+            data.minDamage = document.getElementById('minDamage').value;
+            data.maxDamage = document.getElementById('maxDamage').value;
+            data.magicDamage = document.getElementById('magicDamage').value;
+            data.critRate = document.getElementById('critRate').value;
+            data.critDamage = document.getElementById('critDamage').value;
+        }
+        
+        // 發送請求生成圖片
+        fetch('/generate_result_image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                // 創建下載鏈接
+                const timestamp = new Date().getTime();
+                return response.blob().then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `damage-calc-result-${timestamp}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showNotification('Image generated successfully!', 'success');
+                });
+            } else {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || 'Failed to generate image');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error generating image:', error);
+            showNotification(`Failed to generate image: ${error.message}`, 'error');
+        })
+        .finally(() => {
+            shareBtn.textContent = originalText;
+            shareBtn.disabled = false;
+        });
+    }
+    
+    // 分享優化排名為圖片
+    function shareOptimizationAsImage() {
+        const optimizeResults = document.getElementById('optimizeResultsContent');
+        if (!optimizeResults || optimizeResults.children.length === 0) {
+            showNotification('No optimization results to share', 'error');
+            return;
+        }
+        
+        const shareBtn = document.getElementById('shareOptimizeBtn');
+        const originalText = shareBtn.textContent;
+        shareBtn.textContent = 'Generating Image...';
+        shareBtn.disabled = true;
+        
+        // 收集當前配置數據
+        const usePointSystem = document.getElementById('togglePoints').classList.contains('active');
+        const useOldVersion = document.getElementById('toggleOld').classList.contains('active');
+        const selectedWeapon = document.getElementById('weaponSelect').value;
+        const playerLevel = parseInt(document.getElementById('playerLevel').value) || 190;
+        const classLevel = parseInt(document.getElementById('classLevel').value) || 15;
+        
+        const data = {
+            usePointSystem: usePointSystem,
+            useOldVersion: useOldVersion,
+            selectedWeapon: selectedWeapon,
+            playerLevel: playerLevel,
+            classLevel: classLevel,
+            magicPotion: document.getElementById('magicPotion').checked,
+            attackPotion: document.getElementById('attackPotion').checked,
+            goldenApple: document.getElementById('goldenApple').checked,
+            optimizationType: currentOptimizationType
+        };
+        
+        if (usePointSystem) {
+            data.strength = parseInt(document.getElementById('strength').value) || 0;
+            data.vitality = parseInt(document.getElementById('vitality').value) || 0;
+            data.intelligence = parseInt(document.getElementById('intelligence').value) || 0;
+            data.dexterity = parseInt(document.getElementById('dexterity').value) || 0;
+            data.defense = 0;
+        } else {
+            data.minDamage = document.getElementById('minDamage').value;
+            data.maxDamage = document.getElementById('maxDamage').value;
+            data.magicDamage = document.getElementById('magicDamage').value;
+            data.critRate = document.getElementById('critRate').value;
+            data.critDamage = document.getElementById('critDamage').value;
+        }
+        
+        // 發送請求生成圖片
+        fetch('/generate_ranking_image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                // 創建下載鏈接
+                const timestamp = new Date().getTime();
+                return response.blob().then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `damage-calc-ranking-${timestamp}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showNotification('Ranking image generated successfully!', 'success');
+                });
+            } else {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.error || 'Failed to generate image');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error generating ranking image:', error);
+            showNotification(`Failed to generate ranking image: ${error.message}`, 'error');
+        })
+        .finally(() => {
+            shareBtn.textContent = originalText;
+            shareBtn.disabled = false;
+        });
+    }
+    
+    // 顯示通知消息
+    function showNotification(message, type = 'info') {
+        // 移除現有的通知
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // 創建新通知
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+            color: white;
+            border-radius: 5px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // 3秒後自動移除
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // 添加動畫樣式
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
     function setupEventListeners() {
-        // Calculate button
         document.querySelector('.calculate-btn').addEventListener('click', calculateDamage);
-        
-        // Optimize button
         document.getElementById('optimizeBtn').addEventListener('click', optimizeDamageAdvanced);
-        
-        // Extra data button
         document.querySelector('.extra-data-btn').addEventListener('click', showExtraData);
-        
-        // Close modal button
         document.querySelector('.close-modal').addEventListener('click', closeExtraData);
-        
-        // System toggle buttons
         document.getElementById('togglePoints').addEventListener('click', () => toggleInputSystem('points'));
         document.getElementById('toggleManual').addEventListener('click', () => toggleInputSystem('manual'));
-        
-        // Version toggle buttons
         document.getElementById('toggleCurrent').addEventListener('click', () => toggleGameVersion('current'));
         document.getElementById('toggleOld').addEventListener('click', () => toggleGameVersion('old'));
-        
-        // Equipment search
         document.getElementById('equipmentSearch').addEventListener('input', filterEquipment);
         
-        // Tier filters
         document.querySelectorAll('.tier-filter').forEach((btn, index) => {
             const tiers = ['all', 'I', 'II', 'III', 'IV', 'V'];
             btn.addEventListener('click', function() {
@@ -940,16 +1098,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-        // Weapon select
         document.getElementById('weaponSelect').addEventListener('change', updateWeaponInfo);
-        
-        // Player level change
         document.getElementById('playerLevel').addEventListener('change', updateEquipmentDisplay);
-        
-        // Class level change
         document.getElementById('classLevel').addEventListener('change', calculateDamage);
         
-        // Attribute points changes (移除防禦點數)
         ['strength', 'vitality', 'intelligence', 'dexterity'].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -957,7 +1109,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Potion toggles
         ['magicPotion', 'attackPotion', 'goldenApple'].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -965,7 +1116,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Manual stat inputs
         ['minDamage', 'maxDamage', 'magicDamage', 'critRate', 'critDamage'].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -973,7 +1123,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Optimization filters (delegated event listener) - 移除First Hit
         const optimizationFilters = document.querySelector('.optimization-filters');
         if (optimizationFilters) {
             optimizationFilters.addEventListener('click', function(e) {
@@ -983,7 +1132,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     currentOptimizationType = type;
                     
-                    // Update active class
                     document.querySelectorAll('.filter-btn').forEach(btn => {
                         btn.classList.remove('active');
                     });
@@ -992,13 +1140,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Optimize stats button
         const optimizeStatsBtn = document.getElementById('optimizeStatsBtn');
         if (optimizeStatsBtn) {
             optimizeStatsBtn.addEventListener('click', optimizeStats);
         }
         
-        // Close modal when clicking outside
+        // 添加分享按鈕監聽器
+        document.getElementById('shareResultBtn').addEventListener('click', shareResultAsImage);
+        document.getElementById('shareOptimizeBtn').addEventListener('click', shareOptimizationAsImage);
+        
         window.addEventListener('click', function(event) {
             const modal = document.getElementById('extraDataModal');
             if (event.target === modal) {
@@ -1007,6 +1157,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize the application
     initialize();
 });

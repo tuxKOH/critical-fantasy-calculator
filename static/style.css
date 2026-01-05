@@ -12,7 +12,6 @@ body {
     color: #333;
 }
 
-/* Common Styles for Both Versions */
 .container {
     max-width: 100%;
     margin: 0 auto;
@@ -172,7 +171,6 @@ select:focus, input:focus {
     text-decoration: underline;
 }
 
-/* Version Note */
 .version-note {
     font-size: 0.85em;
     color: #666;
@@ -183,7 +181,6 @@ select:focus, input:focus {
     margin-top: 10px;
 }
 
-/* Old Equipment Style */
 .equipment-old {
     border-left: 3px solid #6c757d !important;
     position: relative;
@@ -199,7 +196,6 @@ select:focus, input:focus {
     display: inline-block;
 }
 
-/* Equipment Image Styles */
 .equipment-header {
     display: flex;
     align-items: flex-start;
@@ -247,7 +243,6 @@ select:focus, input:focus {
     margin-left: 5px;
 }
 
-/* Extra Data Modal */
 .modal {
     display: none;
     position: fixed;
@@ -327,7 +322,6 @@ select:focus, input:focus {
     padding: 3px 0;
 }
 
-/* Set indicators */
 .flame-set-indicator, .wolf-set-indicator, .crimson-set-indicator,
 .queen-bee-set-indicator, .explorer-set-indicator, .forest-set-indicator,
 .library-set-indicator, .blessing-set-indicator {
@@ -347,7 +341,6 @@ select:focus, input:focus {
 .library-set-indicator { background: #6f42c1; color: white; }
 .blessing-set-indicator { background: #17a2b8; color: white; }
 
-/* Optimization Results */
 .optimize-result {
     background: #fff3cd;
     border-left-color: #ffc107;
@@ -413,7 +406,6 @@ select:focus, input:focus {
     color: white;
 }
 
-/* Common Component Styles */
 .system-toggle {
     display: flex;
     gap: 10px;
@@ -620,7 +612,38 @@ select:focus, input:focus {
     gap: 15px;
 }
 
-/* Mobile Styles */
+/* 分享按鈕樣式 */
+.share-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.share-btn {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.share-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #45a049, #3d8b40);
+}
+
+.share-btn:active {
+    transform: translateY(0);
+}
+
 @media (max-width: 767px) {
     .header {
         padding: 20px 15px;
@@ -679,9 +702,17 @@ select:focus, input:focus {
         max-width: 30px;
         max-height: 30px;
     }
+    
+    .share-buttons {
+        flex-direction: column;
+    }
+    
+    .share-btn {
+        padding: 8px 12px;
+        font-size: 0.9em;
+    }
 }
 
-/* Desktop Styles */
 @media (min-width: 768px) {
     body {
         padding: 20px;
