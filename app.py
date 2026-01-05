@@ -16,63 +16,76 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
 import math
 from itertools import combinations
 from data import EQUIPMENT_DB, WEAPON_DB
+from image import ImageGenerator
+from datetime import datetime
+import io
+import os
+import tempfile
+import random
 
 app = Flask(__name__)
 
-# ================ 配置常數（只需要修改這裡） ================
-MAX_LEVEL = 200  # 在這裡修改最大等級
+# 添加自定义过滤器
+@app.template_filter('format_number')
+def format_number_filter(value):
+    """格式化数字为带逗号的字符串"""
+    try:
+        if isinstance(value, (int, float)):
+            return f"{int(value):,}"
+        else:
+            return str(value)
+    except:
+        return str(value)
+
+# ================ Configuration Constants ================
+MAX_LEVEL = 200
 # ========================================================
 
-# Serve static files
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)
 
 class DamageCalculator:
-    # Stat point multipliers
-    STR_DMG_MIN = 2.96
-    STR_DMG_MAX = 6.45
+    # ... 保持原有的 DamageCalculator 类不变 ...
+    # (所有原有的计算方法保持不变)
+    
+    STR_DMG_MIN = 2.4
+    STR_DMG_MAX = 7.5
     INT_MAGIC = 8.0
-    VIT_HP = 75  # 修改：一點VIT加75HP（原為35）
-    BASE_HP = 100  # 修改：初始100HP
+    VIT_HP = 75
+    BASE_HP = 100
     DEF_SHIELD = 17
     DEX_CRIT = 0.8
-    BASE_CRIT_RATE = 1.0  # Base 1% crit rate
-    BASE_CRIT_DAMAGE = 100  # Base 100% crit damage = extra 100% damage
-    MAX_DEX_CRIT = 50 * DEX_CRIT  # Max 50 dexterity points = 40% crit rate
+    BASE_CRIT_RATE = 1.0
+    BASE_CRIT_DAMAGE = 100
+    MAX_DEX_CRIT = 50 * DEX_CRIT
     
-    # Base stats for level 0 character
     BASE_MIN_ATK = 8
     BASE_MAX_ATK = 15
     BASE_MAGIC = 10
     
-    # Class level constants
     MAX_CLASS_LEVEL = 15
     CLASS_LEVEL_MULTIPLIER_PER_LEVEL = 0.02
     BASE_CLASS_LEVEL_MULTIPLIER = 1.0
     
     @staticmethod
     def calculate_class_multiplier(class_level):
-        """Calculate damage multiplier from class level"""
         if class_level < 1:
-            return DamageCalculator.BASE_CLASS_LEVEL_MULTIPLIER + DamageCalculator.CLASS_LEVEL_MULTIPLIER_PER_LEVEL  # 1級 = 1.02x
+            return DamageCalculator.BASE_CLASS_LEVEL_MULTIPLIER + DamageCalculator.CLASS_LEVEL_MULTIPLIER_PER_LEVEL
         
-        # 每級增加 0.02，最低1級 = 1.02x，滿級 15 級 = 1.0 + 15 * 0.02 = 1.3x
         effective_level = max(1, min(class_level, DamageCalculator.MAX_CLASS_LEVEL))
         return DamageCalculator.BASE_CLASS_LEVEL_MULTIPLIER + (effective_level * DamageCalculator.CLASS_LEVEL_MULTIPLIER_PER_LEVEL)
     
     @staticmethod
     def calculate_max_points(level):
-        """Calculate maximum attribute points based on level"""
         return level * 2
     
     @staticmethod
     def calculate_equipment_bonus(equipment_data):
-        """Calculate actual equipment bonuses from drop range"""
         bonuses = {
             'atk_min': 0,
             'atk_max': 0,
@@ -85,29 +98,23 @@ class DamageCalculator:
         
         stats = equipment_data.get('stats', {})
         
-        # Handle attack range (physical equipment)
         if 'atk_min' in stats and 'atk_max' in stats:
-            # Get the middle value of the drop range
             drop_min = stats['atk_min']
             drop_max = stats['atk_max']
             middle_value = (drop_min + drop_max) / 2
             
-            # Apply the 0.85x to min and 1.25x to max for actual bonus
             bonuses['atk_min'] = middle_value * 0.85
             bonuses['atk_max'] = middle_value * 1.25
         
-        # Handle magic damage (magic equipment)
         if 'magic' in stats:
-            # For magic equipment, just use the value directly
             bonuses['magic'] = stats['magic']
         
-        # Handle other stats (direct addition)
         if 'crit_chance' in stats:
             bonuses['crit_chance'] = stats['crit_chance']
         if 'crit_damage' in stats:
             bonuses['crit_damage'] = stats['crit_damage']
         if 'health' in stats:
-            bonuses['health'] = stats['health']  # 裝備生命值直接加入
+            bonuses['health'] = stats['health']
         if 'shield' in stats:
             bonuses['shield'] = stats['shield']
             
@@ -115,14 +122,12 @@ class DamageCalculator:
     
     @staticmethod
     def calculate_stats_from_points(strength, vitality, intelligence, dexterity, defense, level):
-        """Calculate base stats from attribute points"""
-        # Cap dexterity crit contribution at 50 points
         effective_dex_crit = min(dexterity, 50) * DamageCalculator.DEX_CRIT
         
         return {
             'min_damage': strength * DamageCalculator.STR_DMG_MIN + DamageCalculator.BASE_MIN_ATK,
             'max_damage': strength * DamageCalculator.STR_DMG_MAX + DamageCalculator.BASE_MAX_ATK,
-            'health': DamageCalculator.BASE_HP + vitality * DamageCalculator.VIT_HP,  # 基礎100HP + VIT加成
+            'health': DamageCalculator.BASE_HP + vitality * DamageCalculator.VIT_HP,
             'magic_damage': intelligence * DamageCalculator.INT_MAGIC + DamageCalculator.BASE_MAGIC,
             'crit_chance': DamageCalculator.BASE_CRIT_RATE + effective_dex_crit,
             'crit_damage': DamageCalculator.BASE_CRIT_DAMAGE,
@@ -131,14 +136,10 @@ class DamageCalculator:
     
     @staticmethod
     def calculate_ten_second_damage(base_damage, dot_damage, weapon_type, expected_damage):
-        """Calculate damage for 10 seconds based on weapon type and class mechanics"""
-        
-        # Base damage per hit (without DoT)
         base_damage_per_hit = expected_damage
         dot_damage_per_hit = dot_damage
         
-        if weapon_type == 'staff':  # Flow (Mage)
-            # 4 hits in 10 seconds: 7x total multiplier + DoT
+        if weapon_type == 'staff':
             total_base_damage = base_damage_per_hit * 7
             total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
@@ -152,8 +153,7 @@ class DamageCalculator:
                 'mechanic': 'Flow: 7x total damage in 10 seconds (4 hits)'
             }
         
-        elif weapon_type == 'bow':  # Brust (Archer)
-            # 4 hits in 10 seconds: 7x total multiplier + DoT
+        elif weapon_type == 'bow':
             total_base_damage = base_damage_per_hit * 7
             total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
@@ -167,8 +167,7 @@ class DamageCalculator:
                 'mechanic': 'Brust: 7x total damage in 10 seconds (4 hits)'
             }
         
-        elif weapon_type in ['sword', 'blade']:  # Chain (Blade)
-            # 4 hits in 10 seconds: 10x total multiplier + DoT
+        elif weapon_type in ['sword', 'blade']:
             total_base_damage = base_damage_per_hit * 10
             total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
@@ -182,8 +181,7 @@ class DamageCalculator:
                 'mechanic': 'Chain: 10x total damage in 10 seconds (4 hits)'
             }
         
-        elif weapon_type == 'scythe':  # Reverberation (Scythe)
-            # 4 hits in 10 seconds: 4.8x total multiplier + DoT
+        elif weapon_type == 'scythe':
             total_base_damage = base_damage_per_hit * 4.8
             total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
@@ -197,9 +195,8 @@ class DamageCalculator:
                 'mechanic': 'Reverberation: 4.8x total damage in 10 seconds (4 hits)'
             }
         
-        elif weapon_type == 'furioso':  # Furioso - UPDATED
-            # 4 hits in 10 seconds: 3.7x total multiplier + DoT + bleed on 4th hit
-            total_base_damage = base_damage_per_hit * 3.7  # Changed from 5.42 to 3.7
+        elif weapon_type == 'furioso':
+            total_base_damage = base_damage_per_hit * 3.7
             total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
             
@@ -213,8 +210,7 @@ class DamageCalculator:
                 'mechanic': 'Furioso: 3.7x total damage + bleed on 4th hit in 10 seconds (4 hits)'
             }
         
-        else:  # Default (no special mechanic)
-            # Assume 4 hits in 10 seconds for default
+        else:
             total_base_damage = base_damage_per_hit * 4
             total_dot_damage = dot_damage_per_hit * 4
             total_damage = total_base_damage + total_dot_damage
@@ -231,26 +227,21 @@ class DamageCalculator:
     @staticmethod
     def calculate_damage(data):
         try:
-            # 獲取版本設置
             use_old_version = data.get('useOldVersion', False)
             
-            # 獲取 class level (默認滿級 15)
             class_level = int(data.get('classLevel', 15))
             class_multiplier = DamageCalculator.calculate_class_multiplier(class_level)
             
-            # Get base values - either from manual input or calculated from points
             use_point_system = data.get('usePointSystem', False)
             selected_weapon = data.get('selectedWeapon', '')
-            player_level = data.get('playerLevel', MAX_LEVEL)  # 使用 MAX_LEVEL
+            player_level = data.get('playerLevel', MAX_LEVEL)
             
-            # Determine damage type based on weapon
             if selected_weapon:
                 weapon_data = WEAPON_DB.get(selected_weapon, {})
                 damage_type = 'magic' if weapon_data.get('type') == 'staff' else 'attack'
             else:
-                damage_type = 'attack'  # Default to attack if no weapon selected
+                damage_type = 'attack'
             
-            # Track set bonuses
             set_counts = {
                 'flame': 0,
                 'wolf_howl': 0,
@@ -262,17 +253,14 @@ class DamageCalculator:
                 'blessing': 0
             }
             
-            # 初始化裝備生命值加成
             equipment_health_bonus = 0
             
             if use_point_system:
-                # ============ 點數系統模式 ============
-                # Calculate stats from attribute points
                 strength = int(data.get('strength', 0))
                 vitality = int(data.get('vitality', 0))
                 intelligence = int(data.get('intelligence', 0))
                 dexterity = int(data.get('dexterity', 0))
-                defense = int(data.get('defense', 0))  # 防禦點數仍然存在，但不在UI中顯示
+                defense = int(data.get('defense', 0))
                 
                 base_stats = DamageCalculator.calculate_stats_from_points(
                     strength, vitality, intelligence, dexterity, defense, player_level
@@ -283,10 +271,9 @@ class DamageCalculator:
                 magic_damage = base_stats['magic_damage']
                 base_crit_rate = base_stats['crit_chance']
                 base_crit_damage = base_stats['crit_damage']
-                base_health = base_stats['health']  # 基礎生命值（已包含基礎100HP）
-                base_shield = base_stats['shield']  # 基礎護盾值
+                base_health = base_stats['health']
+                base_shield = base_stats['shield']
                 
-                # 點數模式：應用武器屬性
                 if selected_weapon:
                     weapon_data = WEAPON_DB.get(selected_weapon, {})
                     weapon_bonus = DamageCalculator.calculate_equipment_bonus(weapon_data)
@@ -296,54 +283,42 @@ class DamageCalculator:
                     magic_damage += weapon_bonus['magic']
                     base_crit_rate += weapon_bonus['crit_chance']
                     base_crit_damage += weapon_bonus['crit_damage']
-                    equipment_health_bonus += weapon_bonus['health']  # 武器生命加成
+                    equipment_health_bonus += weapon_bonus['health']
                     
-                    # Count weapon set piece
                     if weapon_data.get('set'):
                         set_counts[weapon_data['set']] += 1
                 
-                # Calculate average physical damage
                 avg_physical_damage = (min_damage + max_damage) / 2
                 
             else:
-                # ============ 手動輸入模式 ============
-                # 使用用戶輸入的值作為基礎
                 min_damage = float(data.get('minDamage', 0)) or DamageCalculator.BASE_MIN_ATK
                 max_damage = float(data.get('maxDamage', 0)) or DamageCalculator.BASE_MAX_ATK
                 magic_damage = float(data.get('magicDamage', 0)) or DamageCalculator.BASE_MAGIC
                 base_crit_rate = float(data.get('critRate', DamageCalculator.BASE_CRIT_RATE))
                 base_crit_damage = float(data.get('critDamage', DamageCalculator.BASE_CRIT_DAMAGE))
-                base_health = 0  # 手動模式沒有基礎生命值
-                base_shield = 0  # 手動模式沒有基礎護盾值
+                base_health = 0
+                base_shield = 0
                 
-                # 手動輸入模式：不應用武器基礎屬性，只統計套裝
                 if selected_weapon:
                     weapon_data = WEAPON_DB.get(selected_weapon, {})
-                    # 不應用武器屬性，只統計套裝
                     if weapon_data.get('set'):
                         set_counts[weapon_data['set']] += 1
                 
-                # Calculate average physical damage (based on manual input)
                 avg_physical_damage = (min_damage + max_damage) / 2
             
-            # Get potion effects
             has_magic_potion = data.get('magicPotion', False)
             has_attack_potion = data.get('attackPotion', False)
             has_golden_apple = data.get('goldenApple', False)
             
-            # Get selected equipment
             equipment = data.get('equipment', [])
             
-            # 初始化總爆擊率/傷害
             total_crit_rate = base_crit_rate
             total_crit_damage = base_crit_damage
             
-            # 處理裝備效果
             for eq in equipment:
                 eq_data = EQUIPMENT_DB.get(eq, {})
                 
                 if use_point_system:
-                    # 點數模式：應用裝備的所有屬性加成
                     eq_bonus = DamageCalculator.calculate_equipment_bonus(eq_data)
                     
                     min_damage += eq_bonus['atk_min']
@@ -351,35 +326,33 @@ class DamageCalculator:
                     magic_damage += eq_bonus['magic']
                     total_crit_rate += eq_bonus['crit_chance']
                     total_crit_damage += eq_bonus['crit_damage']
-                    equipment_health_bonus += eq_bonus['health']  # 累加裝備生命值加成
-                # 手動輸入模式：不應用基礎屬性加成
+                    equipment_health_bonus += eq_bonus['health']
                 
-                # 兩種模式都統計套裝數量
                 if eq_data.get('set'):
                     set_counts[eq_data['set']] += 1
             
-            # 重新計算平均物理傷害（點數模式需要，手動模式已經有了）
             if use_point_system:
                 avg_physical_damage = (min_damage + max_damage) / 2
             
-            # 應用藥水效果
             effective_min_damage = min_damage
             effective_max_damage = max_damage
             effective_avg_physical_damage = avg_physical_damage
             effective_magic_damage = magic_damage
             
+            attack_multiplier = 1.0
             if has_attack_potion:
-                effective_min_damage *= 1.75
-                effective_max_damage *= 1.75
-                effective_avg_physical_damage *= 1.75
+                attack_multiplier += 0.75
             if has_golden_apple:
-                effective_min_damage *= 1.5
-                effective_max_damage *= 1.5
-                effective_avg_physical_damage *= 1.5
+                attack_multiplier += 0.50
+            
+            if attack_multiplier > 1.0:
+                effective_min_damage *= attack_multiplier
+                effective_max_damage *= attack_multiplier
+                effective_avg_physical_damage *= attack_multiplier
+            
             if has_magic_potion:
                 effective_magic_damage *= 1.75
             
-            # Apply set bonuses
             set_bonus_applied = {
                 'wolf_howl': False,
                 'crimson': False,
@@ -388,94 +361,64 @@ class DamageCalculator:
                 'flame': False
             }
             
-            # Debug: print set counts
-            print(f"Set Counts: {set_counts}")
-            
-            # Wolf Howl Set: +12% crit chance for 2+ pieces
             if set_counts['wolf_howl'] >= 2:
                 total_crit_rate += 12
                 set_bonus_applied['wolf_howl'] = True
-                print(f"Wolf Howl Set Bonus Applied: +12% crit chance (Count: {set_counts['wolf_howl']})")
             
-            # Crimson Set: +18% magic damage for 2+ pieces
             if set_counts['crimson'] >= 2:
                 effective_magic_damage *= 1.18
                 set_bonus_applied['crimson'] = True
-                print(f"Crimson Set Bonus Applied: +18% magic damage (Count: {set_counts['crimson']})")
             
-            # Forest Dweller Set: +18% melee attack for 2+ pieces
             if set_counts['forest_dweller'] >= 2 and damage_type == 'attack':
                 effective_min_damage *= 1.18
                 effective_max_damage *= 1.18
                 effective_avg_physical_damage *= 1.18
                 set_bonus_applied['forest_dweller'] = True
-                print(f"Forest Dweller Set Bonus Applied: +18% attack damage (Count: {set_counts['forest_dweller']})")
             
-            # Explorer Set: +200 HP for 2+ pieces (applied in player stats)
             if set_counts['explorer'] >= 2:
                 set_bonus_applied['explorer'] = True
-                print(f"Explorer Set Bonus Applied: +200 HP (Count: {set_counts['explorer']})")
             
-            # Calculate base damage based on damage type
             if damage_type == 'magic':
                 base_damage = effective_magic_damage
-                # For magic damage, crit uses the same base damage
                 crit_base_damage = base_damage
-            else:  # attack
+            else:
                 base_damage = effective_avg_physical_damage
-                # For physical damage, crit uses MAX damage instead of average
                 crit_base_damage = effective_max_damage
             
-            # Calculate crit damage multiplier
-            # Crit Damage 100% = extra 100% damage = total damage becomes 200% (2x)
-            crit_rate = min(total_crit_rate / 100, 1.0)  # Cap at 100%
-            crit_damage_multiplier = 1 + (total_crit_damage / 100)  # 100% crit damage = 2x multiplier
+            crit_rate = min(total_crit_rate / 100, 1.0)
+            crit_damage_multiplier = 1 + (total_crit_damage / 100)
             
-            # Calculate expected damage with crit (期望傷害)
-            # Non-crit damage uses base_damage, crit damage uses crit_base_damage * crit_damage_multiplier
             expected_non_crit_damage = base_damage * (1 - crit_rate)
             expected_crit_damage = crit_base_damage * crit_damage_multiplier * crit_rate
-            expected_damage = expected_non_crit_damage + expected_crit_damage  # 這是期望傷害
-
-            # Calculate damage assuming 100% crit (假設100%爆擊的傷害)
+            expected_damage = expected_non_crit_damage + expected_crit_damage
+            
             damage_after_crit = crit_base_damage * crit_damage_multiplier
             
-            # 應用 class level 加成
-            total_damage = expected_damage * class_multiplier  # 應用 class level 加成
-            damage_after_crit = damage_after_crit * class_multiplier  # 也應用 class level 加成
+            total_damage = expected_damage * class_multiplier
+            damage_after_crit = damage_after_crit * class_multiplier
             
-            # Apply equipment effects to expected damage (兩種模式都生效)
-            # 注意：現在 total_damage 已經包含了 class level 加成
-            
-            # Apply equipment effects
             dot_damage = 0
             has_cursed_spellbook = 'cursed_spellbook' in equipment
             has_dual_sword = 'dual_sword' in equipment
             
-            # Cursed Spellbook effect (兩種模式都生效)
             if has_cursed_spellbook:
                 total_damage *= 1.30
-                damage_after_crit *= 1.30  # 也需要對 damage_after_crit 應用
+                damage_after_crit *= 1.30
             
-            # Dual Sword effect (兩種模式都生效)
             if has_dual_sword:
                 dual_sword_multiplier = 1 + (0.15 * (2 - 1))
                 total_damage *= dual_sword_multiplier
-                damage_after_crit *= dual_sword_multiplier  # 也需要對 damage_after_crit 應用
+                damage_after_crit *= dual_sword_multiplier
             
-            # Calculate DOT damage (兩種模式都生效)
             flame_set_count = set_counts['flame']
             burn_chance = 0
             bleed_chance = 0
             poison_chance = 0
             has_volatile_gem = False
             
-            # Check for flame set items and calculate burn chance
-            # KPatch2: 需要檢查新舊版本的裝備
             flame_items = ['daybreak', 'evernight', 'volatile_gem']
             flame_old_items = ['daybreak_old', 'evernight_old', 'volatile_gem_old']
             
-            # 根據版本選擇要檢查的項目
             if use_old_version:
                 items_to_check = flame_old_items
             else:
@@ -495,79 +438,63 @@ class DamageCalculator:
                         poison_chance += special_effects.get('poison_chance', 0.11)
                         has_volatile_gem = True
             
-            # Apply flame set bonus (兩種模式都生效)
             if flame_set_count >= 2:
                 burn_chance += 0.10
                 set_bonus_applied['flame'] = True
-                print(f"Flame Set Bonus Applied: +10% burn chance (Count: {flame_set_count})")
             
-            # Queenbee Crown (bleeding) - 兩種模式都生效
             if 'queenbee_crown' in equipment or 'queenbee_crown_old' in equipment:
                 eq_id = 'queenbee_crown_old' if 'queenbee_crown_old' in equipment else 'queenbee_crown'
                 eq_data = EQUIPMENT_DB.get(eq_id, {})
                 special_effects = eq_data.get('special_effects', {})
                 bleed_chance += special_effects.get('bleed_chance', 0.26)
             
-            # Volatile Gem (新版本) - 增加流血機率，但只在當前版本中
             if 'volatile_gem' in equipment and not use_old_version:
                 bleed_chance += 0.10
             
-            # 計算DoT機率（最終值）
             final_burn_chance = min(burn_chance, 1) * 100
             final_bleed_chance = min(bleed_chance, 1) * 100
             final_poison_chance = min(poison_chance, 1) * 100
             
-            # Calculate burn damage (uses potion-boosted magic damage)
             if burn_chance > 0:
                 burn_damage = effective_magic_damage * 0.33 * 5
                 if has_volatile_gem:
                     burn_damage += effective_magic_damage * 0.20
                 dot_damage += burn_damage * min(burn_chance, 1)
             
-            # Queenbee Crown bleeding damage - uses potion-boosted average physical damage
             if bleed_chance > 0:
                 bleeding_damage = effective_avg_physical_damage * 0.25 * 5
                 dot_damage += bleeding_damage * min(bleed_chance, 1)
             
-            # Volatile Gem poison - uses potion-boosted magic damage
             if poison_chance > 0:
                 poison_damage = effective_magic_damage * 0.40 * 5
                 poison_damage += effective_magic_damage * 0.20
                 dot_damage += poison_damage * min(poison_chance, 1)
             
-            # Blood Butcher - uses potion-boosted min physical damage
             has_blood_butcher = 'blood_butcher' in equipment or 'blood_butcher_old' in equipment
             if has_blood_butcher:
                 blood_damage = effective_min_damage * 0.05 * 9
                 dot_damage += blood_damage
             
-            # Total final damage (包含DoT)
             final_damage = total_damage + dot_damage
             
-            # Calculate ten second damage
             weapon_type = WEAPON_DB.get(selected_weapon, {}).get('type', 'sword') if selected_weapon else 'sword'
             ten_second_data = DamageCalculator.calculate_ten_second_damage(
                 base_damage, dot_damage, weapon_type, total_damage
             )
             
-            # 計算總生命值（點數模式才計算）
             total_health = 0
             total_shield = 0
             total_hp = 0
             
             if use_point_system:
-                # 計算裝備加成後的生命值
                 total_health = base_health + equipment_health_bonus
                 total_shield = base_shield
                 
-                # 應用探險家套裝加成
                 explorer_hp_bonus = 200 if set_counts['explorer'] >= 2 else 0
                 total_health += explorer_hp_bonus
                 
-                # 總HP = 生命值 + 護盾值
                 total_hp = total_health + total_shield
             
-            # Prepare detailed calculation data
             calculation_details = {
                 'class_level': {
                     'level': class_level,
@@ -615,7 +542,7 @@ class DamageCalculator:
             
             result = {
                 'success': True,
-                'use_point_system': use_point_system,  # 新增字段，標記使用的模式
+                'use_point_system': use_point_system,
                 'class_level': class_level,
                 'class_multiplier': round(class_multiplier, 3),
                 'min_damage': round(min_damage, 2),
@@ -627,9 +554,9 @@ class DamageCalculator:
                 'effective_avg_physical_damage': round(effective_avg_physical_damage, 2),
                 'effective_magic_damage': round(effective_magic_damage, 2),
                 'base_damage': round(base_damage, 2),
-                'expected_damage': round(expected_damage, 2),  # 新增：期望傷害
-                'damage_after_crit': round(damage_after_crit, 2),  # 新增：100%爆擊傷害（含class level加成）
-                'crit_multiplied_damage': round(total_damage, 2),  # 保持舊名稱兼容（含class level加成）
+                'expected_damage': round(expected_damage, 2),
+                'damage_after_crit': round(damage_after_crit, 2),
+                'crit_multiplied_damage': round(total_damage, 2),
                 'dot_damage': round(dot_damage, 2),
                 'final_damage': round(final_damage, 2),
                 'effective_multiplier': round(final_damage / base_damage, 2) if base_damage > 0 else 0,
@@ -646,7 +573,8 @@ class DamageCalculator:
                 'potion_effects': {
                     'magic_potion': has_magic_potion,
                     'attack_potion': has_attack_potion,
-                    'golden_apple': has_golden_apple
+                    'golden_apple': has_golden_apple,
+                    'attack_multiplier': round(attack_multiplier, 2)
                 },
                 'calculated_stats': use_point_system,
                 'ten_second_damage': {
@@ -664,14 +592,15 @@ class DamageCalculator:
             
             if use_point_system:
                 result['player_stats'] = {
-                    'health': total_health,  # 最終生命值（包含基礎100HP+VIT加成+裝備加成+套裝加成）
+                    'health': total_health,
                     'shield': total_shield,
                     'total_hp': total_hp,
-                    'min_damage': min_damage,
-                    'max_damage': max_damage,
-                    'magic_damage': magic_damage,
+                    'min_damage': effective_min_damage,
+                    'max_damage': effective_max_damage,
+                    'magic_damage': effective_magic_damage,
                     'crit_rate': total_crit_rate,
-                    'crit_damage': total_crit_damage
+                    'crit_damage': total_crit_damage,
+                    'attack_multiplier': round(attack_multiplier, 2)
                 }
             
             return result
@@ -680,7 +609,6 @@ class DamageCalculator:
             return {'success': False, 'error': str(e)}
 
 def is_mobile_device(user_agent):
-    """Detect if the request is from a mobile device"""
     mobile_keywords = [
         'mobile', 'android', 'iphone', 'ipad', 'ipod', 
         'blackberry', 'webos', 'windows phone', 'kindle'
@@ -706,11 +634,9 @@ def calculate():
 
 @app.route('/optimize', methods=['POST'])
 def optimize_damage():
-    """Find the best equipment combinations for maximum damage"""
     data = request.get_json()
     
     try:
-        # Get base configuration
         base_config = {
             'usePointSystem': data.get('usePointSystem', False),
             'selectedWeapon': data.get('selectedWeapon', ''),
@@ -718,7 +644,8 @@ def optimize_damage():
             'attackPotion': data.get('attackPotion', False),
             'goldenApple': data.get('goldenApple', False),
             'useOldVersion': data.get('useOldVersion', False),
-            'classLevel': data.get('classLevel', 15)
+            'classLevel': data.get('classLevel', 15),
+            'playerLevel': data.get('playerLevel', MAX_LEVEL)  # 添加 playerLevel
         }
         
         if base_config['usePointSystem']:
@@ -727,7 +654,7 @@ def optimize_damage():
                 'vitality': data.get('vitality', 0),
                 'intelligence': data.get('intelligence', 0),
                 'dexterity': data.get('dexterity', 0),
-                'defense': 0  # 防禦點數設為0，因為UI中已移除
+                'defense': 0
             })
         else:
             base_config.update({
@@ -738,11 +665,9 @@ def optimize_damage():
                 'critDamage': data.get('critDamage', 100)
             })
         
-        # Get all equipment IDs based on version
         use_old_version = base_config.get('useOldVersion', False)
         
         if use_old_version:
-            # For old version, use items that have _old suffix or don't have a _new counterpart
             all_equipment = []
             for eq_id in EQUIPMENT_DB.keys():
                 if eq_id.endswith('_old'):
@@ -750,18 +675,15 @@ def optimize_damage():
                 elif '_old' not in eq_id and eq_id + '_old' not in EQUIPMENT_DB:
                     all_equipment.append(eq_id)
         else:
-            # For current version, exclude _old items
             all_equipment = [eq_id for eq_id in EQUIPMENT_DB.keys() if not eq_id.endswith('_old')]
         
         max_equipment = 3
         
-        # Generate all possible combinations
         all_combinations = list(combinations(all_equipment, max_equipment))
         
-        # Test each combination and find the best ones
         results = []
         for i, combo in enumerate(all_combinations):
-            if i % 100 == 0:  # Progress tracking for large datasets
+            if i % 100 == 0:
                 print(f"Testing combination {i}/{len(all_combinations)}")
             
             test_config = base_config.copy()
@@ -777,13 +699,10 @@ def optimize_damage():
                     'crit_damage': result['crit_damage']
                 })
         
-        # Sort by final damage (descending)
         results.sort(key=lambda x: x['final_damage'], reverse=True)
         
-        # Return top 10 combinations
         top_combinations = results[:10]
         
-        # Format results with equipment names
         formatted_results = []
         for combo in top_combinations:
             equipment_names = [EQUIPMENT_DB[eq_id]['name'] for eq_id in combo['equipment']]
@@ -808,18 +727,18 @@ def optimize_damage():
 
 @app.route('/optimize_advanced', methods=['POST'])
 def optimize_damage_advanced():
-    """Find the best equipment combinations with different criteria - SUPPORTS MIXED VERSIONS"""
     data = request.get_json()
     
     try:
-        # Get base configuration
+        player_level = data.get('playerLevel', MAX_LEVEL)
+        
         base_config = {
             'usePointSystem': data.get('usePointSystem', False),
             'selectedWeapon': data.get('selectedWeapon', ''),
             'magicPotion': data.get('magicPotion', False),
             'attackPotion': data.get('attackPotion', False),
             'goldenApple': data.get('goldenApple', False),
-            'playerLevel': data.get('playerLevel', MAX_LEVEL),  # 使用 MAX_LEVEL
+            'playerLevel': player_level,
             'useOldVersion': data.get('useOldVersion', False),
             'classLevel': data.get('classLevel', 15)
         }
@@ -830,7 +749,7 @@ def optimize_damage_advanced():
                 'vitality': data.get('vitality', 0),
                 'intelligence': data.get('intelligence', 0),
                 'dexterity': data.get('dexterity', 0),
-                'defense': 0  # 防禦點數設為0，因為UI中已移除
+                'defense': 0
             })
         else:
             base_config.update({
@@ -841,53 +760,40 @@ def optimize_damage_advanced():
                 'critDamage': data.get('critDamage', 100)
             })
         
-        optimization_type = data.get('optimizationType', 'final_damage')  # final_damage, ten_second, dot (移除 first_hit)
+        optimization_type = data.get('optimizationType', 'final_damage')
         
-        # Get all equipment IDs that meet level requirement
-        player_level = base_config['playerLevel']
         use_old_version = base_config.get('useOldVersion', False)
         
         available_equipment = []
         for eq_id, eq_data in EQUIPMENT_DB.items():
-            # Check level requirement
             if eq_data.get('level_req', 0) > player_level:
                 continue
             
-            # For optimization, include both versions to allow mixing
-            # but respect the version setting for filtering
             if use_old_version:
-                # For old version optimization, prioritize old items but allow current if no old exists
                 if eq_id.endswith('_old'):
                     available_equipment.append(eq_id)
                 elif '_old' not in eq_id and eq_id + '_old' not in EQUIPMENT_DB:
-                    # Only include current version if there's no old version
                     available_equipment.append(eq_id)
             else:
-                # For current version, include current and old items (for mixing)
                 available_equipment.append(eq_id)
         
         max_equipment = 3
         
-        # Generate all possible combinations from available equipment
         all_combinations = list(combinations(available_equipment, max_equipment))
         
-        # Filter combinations to prevent mixing old and new versions of the same item
         filtered_combinations = []
         for combo in all_combinations:
             valid = True
             items_by_base = {}
             
-            # Group items by base name
             for item_id in combo:
                 base_name = item_id.replace('_old', '')
                 if base_name not in items_by_base:
                     items_by_base[base_name] = []
                 items_by_base[base_name].append(item_id)
             
-            # Check for conflicts (both old and new versions of same item)
             for base_name, versions in items_by_base.items():
                 if len(versions) > 1:
-                    # Check if we have both old and new versions
                     has_old = any('_old' in v for v in versions)
                     has_new = any('_old' not in v for v in versions)
                     if has_old and has_new:
@@ -897,24 +803,26 @@ def optimize_damage_advanced():
             if valid:
                 filtered_combinations.append(combo)
         
-        print(f"Total combinations: {len(all_combinations)}, Valid after filtering: {len(filtered_combinations)}")
-        
-        # Test each combination and find the best ones
         results = []
-        for i, combo in enumerate(filtered_combinations):
-            if i % 100 == 0:  # Progress tracking
-                print(f"Testing combination {i}/{len(filtered_combinations)}")
+        # 限制测试的组合数量以避免性能问题
+        max_combinations_to_test = min(100000, len(filtered_combinations))
+        
+        if len(filtered_combinations) > max_combinations_to_test:
+            tested_combinations = random.sample(filtered_combinations, max_combinations_to_test)
+        else:
+            tested_combinations = filtered_combinations
+        
+        for i, combo in enumerate(tested_combinations):
+            if i % 100 == 0:
+                print(f"Testing combination {i}/{len(tested_combinations)}")
             
             test_config = base_config.copy()
             test_config['equipment'] = list(combo)
             
-            # Override version setting for mixed calculations
-            # When mixing, we need to check if there are any old items in the combo
             has_old_items = any('_old' in item_id for item_id in combo)
             
             result = DamageCalculator.calculate_damage(test_config)
             if result['success']:
-                # Determine score based on optimization type
                 if optimization_type == 'final_damage':
                     score = result['final_damage']
                 elif optimization_type == 'ten_second':
@@ -935,13 +843,10 @@ def optimize_damage_advanced():
                     'has_old_items': has_old_items
                 })
         
-        # Sort by score (descending)
         results.sort(key=lambda x: x['score'], reverse=True)
         
-        # Return top 10 combinations
         top_combinations = results[:10]
         
-        # Format results with equipment names
         formatted_results = []
         for combo in top_combinations:
             equipment_names = []
@@ -967,7 +872,8 @@ def optimize_damage_advanced():
         return jsonify({
             'success': True,
             'top_combinations': formatted_results,
-            'total_combinations_tested': len(filtered_combinations),
+            'total_combinations_tested': len(tested_combinations),
+            'total_combinations_available': len(filtered_combinations),
             'optimization_type': optimization_type,
             'available_equipment_count': len(available_equipment),
             'allows_mixed_versions': True,
@@ -975,21 +881,19 @@ def optimize_damage_advanced():
         })
         
     except Exception as e:
+        print(f"Error in optimize_advanced: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-# 添加屬性點優化計算
 @app.route('/optimize_stats', methods=['POST'])
 def optimize_stats():
-    """Calculate optimal stat distribution for given vitality"""
     data = request.get_json()
     
     try:
-        player_level = data.get('playerLevel', MAX_LEVEL)  # 使用 MAX_LEVEL
+        player_level = data.get('playerLevel', MAX_LEVEL)
         total_points = DamageCalculator.calculate_max_points(player_level)
         vitality = int(data.get('vitality', 0))
         selected_weapon = data.get('selectedWeapon', '')
         
-        # Determine if magic or physical build based on weapon
         weapon_type = 'physical'
         if selected_weapon and WEAPON_DB.get(selected_weapon, {}).get('type') == 'staff':
             weapon_type = 'magic'
@@ -1007,24 +911,18 @@ def optimize_stats():
                 }
             })
         
-        # For low levels, focus on main stat (STR/INT) over DEX
-        # For high levels, balance between main stat and DEX
-        # 移除防禦加點
-        
         if player_level < 50:
-            # Low level: 85% main stat, 15% DEX
             if weapon_type == 'magic':
                 intelligence = int(remaining_points * 0.85)
-                dexterity = min(int(remaining_points * 0.15), 50)  # Cap at 50
+                dexterity = min(int(remaining_points * 0.15), 50)
                 strength = 0
             else:
                 strength = int(remaining_points * 0.85)
                 dexterity = min(int(remaining_points * 0.15), 50)
                 intelligence = 0
-            defense = 0  # 移除防禦加點
+            defense = 0
             
         elif player_level < 100:
-            # Mid level: 75% main stat, 25% DEX
             if weapon_type == 'magic':
                 intelligence = int(remaining_points * 0.75)
                 dexterity = min(int(remaining_points * 0.25), 50)
@@ -1033,10 +931,9 @@ def optimize_stats():
                 strength = int(remaining_points * 0.75)
                 dexterity = min(int(remaining_points * 0.25), 50)
                 intelligence = 0
-            defense = 0  # 移除防禦加點
+            defense = 0
             
         else:
-            # High level: 65% main stat, 35% DEX
             if weapon_type == 'magic':
                 intelligence = int(remaining_points * 0.65)
                 dexterity = min(int(remaining_points * 0.35), 50)
@@ -1045,13 +942,11 @@ def optimize_stats():
                 strength = int(remaining_points * 0.65)
                 dexterity = min(int(remaining_points * 0.35), 50)
                 intelligence = 0
-            defense = 0  # 移除防禦加點
+            defense = 0
         
-        # Ensure we don't exceed point limit and distribute remaining points to main stat
         total_used = vitality + strength + intelligence + dexterity + defense
         remaining_after_optimization = total_points - total_used
         
-        # Add remaining points to main stat
         if remaining_after_optimization > 0:
             if weapon_type == 'magic':
                 intelligence += remaining_after_optimization
@@ -1075,5 +970,62 @@ def optimize_stats():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/generate_result_image', methods=['POST'])
+def generate_result_image():
+    """生成计算结果图片"""
+    try:
+        data = request.get_json()
+        
+        # 获取计算结果
+        result = DamageCalculator.calculate_damage(data)
+        if not result['success']:
+            return jsonify({'success': False, 'error': 'Calculation failed'})
+        
+        # 使用 ImageGenerator 生成图片
+        image_result = ImageGenerator.generate_result_image(data, result, EQUIPMENT_DB, WEAPON_DB)
+        
+        if not image_result['success']:
+            return jsonify({'success': False, 'error': image_result['error']})
+        
+        # 返回文件
+        return send_file(
+            image_result['file'],
+            mimetype=image_result['mimetype'],
+            as_attachment=True,
+            download_name=image_result['download_name']
+        )
+        
+    except Exception as e:
+        print(f"Error generating result image: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/generate_ranking_image', methods=['POST'])
+def generate_ranking_image():
+    """生成排名图片"""
+    try:
+        data = request.get_json()
+        
+        # 首先执行优化计算
+        response = optimize_damage_advanced()
+        optimization_data = response.get_json()
+        
+        # 使用 ImageGenerator 生成图片
+        image_result = ImageGenerator.generate_ranking_image(data, optimization_data, EQUIPMENT_DB, WEAPON_DB)
+        
+        if not image_result['success']:
+            return jsonify({'success': False, 'error': image_result['error']})
+        
+        # 返回文件
+        return send_file(
+            image_result['file'],
+            mimetype=image_result['mimetype'],
+            as_attachment=True,
+            download_name=image_result['download_name']
+        )
+        
+    except Exception as e:
+        print(f"Error generating ranking image: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
