@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
@@ -16,6 +19,8 @@
       "dest": "app.py"
     }
   ],
-  "installCommand": "pip install -r requirements.txt",
-  "outputDirectory": "."
-}\
+  "env": {
+    "PYTHONPATH": "/var/task",
+    "MAX_WORKERS": "1"
+  }
+}
