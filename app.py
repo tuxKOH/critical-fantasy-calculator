@@ -42,7 +42,7 @@ def format_number_filter(value):
         return str(value)
 
 # ================ Configuration Constants ================
-MAX_LEVEL = 200
+MAX_LEVEL = 210
 # ========================================================
 
 @app.route('/static/<path:filename>')
